@@ -20,10 +20,12 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
                 Serial.print(static_cast<char>(Serial.read()));
             break;
         }
-        else if (c == '\b')
+        else if (c == '\b') // backspace
         {
             if (length == 0)
                 continue;
+            Serial.print(' ');
+            Serial.print('\b');
             length--;
             buffer[length] = '\0';
         }
