@@ -17,38 +17,62 @@ LoRaModule::LoRaModule(const uint8_t csPin, const uint8_t rstPin, const uint8_t 
     }
 };
 
-void LoRaModule::sendRepeat(const MACAddress& dest)
+void LoRaModule::setCompletionWake()
 {
-    Log::debug("Sending REPEAT message to ", dest.toString());
-    auto repeatMessage = Message<REPEAT>(this->mac, dest);
-    sendPacket(repeatMessage.toData(), repeatMessage.getLength());
+    canWait = true;
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)DIO0Pin, 1);
 }
 
-void LoRaModule::sendPacket(const uint8_t* buffer, size_t length)
+void LoRaModule::setTimerWake(uint32_t ms)
 {
+    canWait = true;
+    esp_sleep_enable_timer_wakeup(ms * 1000);
+}
+
+void LoRaModule::clearWake()
+{
+    canWait = false;
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
-    int state = this->startTransmit(const_cast<uint8_t*>(buffer), length);
-    if (state == RADIOLIB_ERR_NONE)
-    {
-        esp_light_sleep_start();
-        Log::debug("Packet sent!");
-    }
-    else
-    {
-        Log::error("Send failed, code: ", state);
-    }
-    this->finishTransmit();
 }
 
-void LoRaModule::resendMessage()
+bool LoRaModule::wait()
 {
-    if (sendLength == 0)
+    if (!canWait)
+        return true;
+    esp_light_sleep_start();
+    clearWake();
+    return esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_TIMER;
+}
+
+bool LoRaModule::sendPacket(const uint8_t* buffer, size_t size)
+{
+    clearWake();
+    setCompletionWake();
+    Log::debug("Starting send ...");
+    int state = this->startTransmit(const_cast<uint8_t*>(buffer), size);
+    if (state != RADIOLIB_ERR_NONE)
     {
-        Log::error("Could not repeat last sent message because no message has been sent yet.");
-        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-        return;
+        clearWake();
+        Log::error("Send failed, code: ", state);
+        return false;
     }
-    Log::debug("Resending last sent message to ", this->getLastDest().toString());
-    sendPacket(this->sendBuffer, this->sendLength);
+    return true;
+}
+
+bool LoRaModule::receivePacket(uint32_t timeoutMs)
+{
+    clearWake();
+    // When the LoRa module get's a message it will generate an interrupt on DIO0.
+    setCompletionWake();
+    // We use the timer wakeup as timeout for receiving a LoRa reply.
+    setTimerWake(timeoutMs);
+    Log::debug("Starting receive ...");
+    int state = this->startReceive();
+    if (state != RADIOLIB_ERR_NONE)
+    {
+        clearWake();
+        Log::error("Receive failed, code: ", state);
+        return false;
+    }
+    return true;
 }

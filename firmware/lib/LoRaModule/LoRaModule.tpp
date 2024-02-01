@@ -32,22 +32,6 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
         source = std::cref(this->getLastDest());
     timeoutMs /= repeatAttempts + 1;
 
-    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    // When the LoRa module get's a message it will generate an interrupt on DIO0.
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
-    // We use the timer wakeup as timeout for receiving a LoRa reply.
-    esp_sleep_enable_timer_wakeup((timeoutMs + listenMs) * 1000);
-    do
-    {
-        Log::debug("Starting receive ...");
-        int state{this->startReceive()};
-
-        if (state != RADIOLIB_ERR_NONE)
-        {
-            Log::error("Receive failed, code: ", state);
-            return std::nullopt;
-        }
-
         esp_light_sleep_start();
 
         esp_sleep_wakeup_cause_t wakeupCause{esp_sleep_get_wakeup_cause()};
@@ -60,7 +44,7 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             if (state == RADIOLIB_ERR_CRC_MISMATCH)
             {
                 Log::error("Reading received data (", this->getPacketLength(false),
-                           " bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...");
+                           " bytes) failed because of a CRC mismatch.");
                 continue;
             }
             if (state != RADIOLIB_ERR_NONE)
