@@ -23,6 +23,11 @@ void Node::naiveTimeConfig(uint32_t cTime)
     this->errors++;
 }
 
+Message<TIME_CONFIG> Node::currentTimeConfig(const MACAddress& src, uint32_t cTime)
+{
+    return Message<TIME_CONFIG>(src, mac, cTime, sampleInterval, sampleRounding, sampleOffset, commInterval, nextCommTime, maxMessages);
+}
+
 RTC_DATA_ATTR bool initialBoot{true};
 RTC_DATA_ATTR int commPeriods{0};
 
@@ -82,63 +87,77 @@ void Gateway::wake()
         deepSleepUntil(WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
 }
 
-std::optional<std::reference_wrapper<Node>> Gateway::macToNode(char* mac)
+std::optional<std::reference_wrapper<Node>> Gateway::macToNode(const MACAddress& mac)
 {
-    MACAddress searchMac{MACAddress::fromString(mac)};
     for (Node& n : nodes)
     {
-        if (searchMac == n.getMACAddress())
+        if (mac == n.getMACAddress())
             return std::make_optional(std::ref(n));
     }
-    Log::error("No node found for ", mac);
+    Log::error("No node found for ", mac.toString());
     return std::nullopt;
 }
 
 void Gateway::discovery()
 {
-    if (nodes.size() >= MAX_SENSOR_NODES)
+    while (true)
     {
-        Log::info("Could not run discovery because maximum amount of nodes has been reached.");
-        return;
-    }
-    Log::info("Sending discovery message.");
-    lora.sendMessage(Message<HELLO>(lora.getMACAddress(), MACAddress::broadcast));
-    Log::debug("Awaiting discovery response message ...");
-    auto helloReply{lora.receiveMessage<HELLO_REPLY>(DISCOVERY_TIMEOUT)};
-    if (!helloReply)
-    {
-        Log::error("Error while awaiting/receiving reply to discovery message. Aborting discovery.");
-        return;
-    }
-    Log::info("Node found at ", helloReply->getSource().toString());
+        if (nodes.size() >= MAX_SENSOR_NODES)
+        {
+            Log::info("Could not run discovery because maximum amount of nodes has been reached.");
+            return;
+        }
+        Log::debug("Awaiting discovery message ...");
+        auto hello{lora.listenMessage<HELLO>(DISCOVERY_TIMEOUT, pins.bootPin)};
+        if (!hello)
+        {
+            if (digitalRead(pins.bootPin))
+                return;
+            continue;
+        }
+        MACAddress candidate = hello->getSource();
+        Log::info("Node found at ", candidate.toString());
 
-    uint32_t cTime{rtc.getSysTime()};
-    uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
-    uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
+        auto duplicate{macToNode(candidate)};
 
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
-                                    helloReply->getSource(),
-                                    cTime,
-                                    sampleInterval,
-                                    sampleRounding,
-                                    sampleOffset,
-                                    commInterval,
-                                    commTime,
-                                    MAX_MESSAGES(commInterval, sampleInterval)};
-    Log::debug("Time config constructed. cTime = ", cTime, " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
-               " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
-    Log::debug("Sending time config message to ", helloReply->getSource().toString());
-    lora.sendMessage(timeConfig);
-    auto time_ack{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, helloReply->getSource())};
-    if (!time_ack)
-    {
-        Log::error("Error while receiving ack to time config message from ", helloReply->getSource().toString(), ". Aborting discovery.");
-        return;
+        uint32_t cTime{rtc.getSysTime()};
+        Log::debug("Sending time config message to ", candidate.toString());
+        if (duplicate)
+        {
+            lora.sendMessage(duplicate->get().currentTimeConfig(lora.getMACAddress(), cTime));
+        }
+        else
+        {
+            uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
+            uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
+            Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
+                                            candidate,
+                                            cTime,
+                                            sampleInterval,
+                                            sampleRounding,
+                                            sampleOffset,
+                                            commInterval,
+                                            commTime,
+                                            MAX_MESSAGES(commInterval, sampleInterval)};
+            Log::debug("Time config constructed. cTime = ", cTime, " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
+                " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
+            nodes.emplace_back(timeConfig);
+            lora.sendMessage(timeConfig);
+        }
+        auto timeAck{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, candidate)};
+        if (!timeAck)
+        {
+            Log::error("Error while receiving ack to time config message from ", candidate.toString(), ". Aborting discovery.");
+            if(duplicate)
+                removeNode(duplicate->get());
+            else
+                nodes.pop_back();
+            return;
+        }
+
+        Log::info("Node ", timeAck->getSource().toString(), " has been registered.");
+        updateNodesFile();
     }
-
-    Log::info("Registering node ", time_ack->getSource().toString());
-    nodes.emplace_back(timeConfig);
-    updateNodesFile();
 }
 
 void Gateway::nodesFromFile()
@@ -380,8 +399,7 @@ void Gateway::parseNodeUpdate(char* update)
         Log::error("Update string '", update, "' has invalid length.");
         return;
     }
-    char* macString{update};
-    auto node{macToNode(macString)};
+    auto node{macToNode(MACAddress::fromString(update))};
     if (!node)
     {
         Log::error("Could not deduce node from update string.");
@@ -428,6 +446,7 @@ CommandCode Gateway::Commands::rtcUpdateTime()
     parent->wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
+        esp_netif_init();
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, NTP_URL);
         sntp_init();

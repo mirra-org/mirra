@@ -35,6 +35,9 @@ public:
     /// @brief Configures the Node as if the time config message was missed, the same way the actual module would do.
     void naiveTimeConfig(uint32_t cTime);
 
+    /// @return A Time Config message that yields the same exact configuration as this node.
+    Message<TIME_CONFIG> currentTimeConfig(const MACAddress& src, uint32_t cTime);
+
     const MACAddress& getMACAddress() const { return mac; }
     uint32_t getSampleInterval() const { return sampleInterval; }
     uint32_t getSampleRounding() const { return sampleRounding; }
@@ -91,7 +94,7 @@ private:
     /// @brief Returns the local node corresponding to the MAC address.
     /// @param mac The MAC address string in the "00:00:00:00:00:00" format.
     /// @return A reference to the matching node. Disenaged if no match is found.
-    std::optional<std::reference_wrapper<Node>> macToNode(char* mac);
+    std::optional<std::reference_wrapper<Node>> macToNode(const MACAddress& mac);
 
     /// @brief Sends a single discovery message, storing the new node and configuring its timings if there is a response.
     void discovery();
@@ -100,6 +103,8 @@ private:
     void nodesFromFile();
     /// @brief Updates the nodes stored on the local filesystem. Used to retain the Nodes objects through deep sleep.
     void updateNodesFile();
+
+    void removeNode(Node&) {};
 
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();

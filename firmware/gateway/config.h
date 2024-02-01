@@ -60,7 +60,7 @@
 #define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
 #define DEFAULT_SAMPLE_OFFSET (0)
 
-#define DISCOVERY_TIMEOUT 5000 // ms
+#define DISCOVERY_TIMEOUT 5 * 60 * 1000 // ms
 
 #define TIME_CONFIG_TIMEOUT 6000 // ms
 #define TIME_CONFIG_ATTEMPTS 1

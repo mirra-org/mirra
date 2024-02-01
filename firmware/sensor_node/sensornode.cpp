@@ -59,21 +59,14 @@ void SensorNode::wake()
 
 void SensorNode::discovery()
 {
-    Log::info("Awaiting discovery message...");
-    auto hello = lora.receiveMessage<HELLO>(DISCOVERY_TIMEOUT);
-    if (!hello)
-    {
-        Log::error("Error while awaiting discovery message from gateway. Aborting discovery listening.");
-        return;
-    }
-    const MACAddress& gatewayMAC = hello->getSource();
-    Log::info("Gateway found at ", gatewayMAC.toString(), ". Sending response message...");
-    lora.sendMessage(Message<HELLO_REPLY>(lora.getMACAddress(), gatewayMAC));
+    Log::info("Sending hello message...");
+    lora.sendMessage(Message<HELLO>(lora.getMACAddress(), MACAddress::broadcast));
     Log::debug("Awaiting time config message...");
-    auto timeConfig = lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, gatewayMAC);
+    auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, MACAddress::broadcast)};
+    const MACAddress& gatewayMAC{timeConfig->getSource()};
     if (!timeConfig)
     {
-        Log::error("Error while awaiting time config message from gateway. Aborting discovery listening.");
+        Log::error("Error while awaiting time config message from gateway. Aborting discovery.");
         return;
     }
     this->timeConfig(*timeConfig);

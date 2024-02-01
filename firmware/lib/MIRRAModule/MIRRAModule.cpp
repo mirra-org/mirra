@@ -89,11 +89,11 @@ void MIRRAModule::deepSleep(uint32_t sleepTime)
     if (sleepTime <= 0)
     {
         Log::error("Sleep time was zero or negative! Sleeping one second to avert crisis.");
-        return deepSleep(1);
+        sleepTime = 1;
     }
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 10s the internal oscillator will be used to wake from deep
+    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 30s the internal oscillator will be used to wake from deep
     // sleep
     if (sleepTime <= 30)
     {
