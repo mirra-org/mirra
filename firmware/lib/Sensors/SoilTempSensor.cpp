@@ -7,7 +7,7 @@ SensorValue SoilTemperatureSensor::getMeasurement()
 {
 
     DeviceAddress longWireThermometer;
-    dallas.getAddress(longWireThermometer, 0);
+    dallas.getAddress(longWireThermometer, this->busIndex);
     dallas.requestTemperaturesByAddress(longWireThermometer);
     return SensorValue(getID(), dallas.getTempCByIndex(this->busIndex));
 }
