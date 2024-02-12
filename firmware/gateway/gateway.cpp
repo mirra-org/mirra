@@ -455,16 +455,16 @@ CommandCode Gateway::Commands::rtcUpdateTime()
         {
             if (esp_timer_get_time() > timeout)
             {
-                Log::error("Failed to update system time within 10s timeout");
+                Serial.println("Failed to update system time within 10s timeout.");
                 WiFi.disconnect();
                 return COMMAND_ERROR;
             }
         }
         if (sntp_enabled())
             sntp_stop();
-        Log::debug("Writing time to RTC...");
+        Serial.println("Writing time to RTC...");
         parent->rtc.writeTime(parent->rtc.getSysTime());
-        Log::info("RTC and system time updated.");
+        Serial.println("RTC and system time updated.");
     }
     WiFi.disconnect();
     return COMMAND_SUCCESS;
