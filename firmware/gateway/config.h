@@ -1,29 +1,8 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-#define TINY_GSM_MODEM_SIM800
-
-#define M_SEL0 25
-#define M_SEL1 27
-
-// Pin assignments
-#define BOOT_PIN 0
-
-#define PERIPHERAL_POWER_PIN 16
-
-#define SDA_PIN 21
-#define SCL_PIN 22
-
-// LoRa module pins
-#define CS_PIN 13   // Chip select pin
-#define RST_PIN 14  // Reset pin
-#define DIO0_PIN 34 // DIO0 pin: LoRa interrupt pin
-#define TX_PIN 17
-#define RX_PIN 16
-
-// PCF2129 timer
-#define RTC_INT_PIN 35   // Interrupt pin
-#define RTC_ADDRESS 0x51 // i2c address
+// Pin definitions
+#include "pins_sensornode_rev5.h"
 
 // Filepaths
 #define NODES_FP "/nodes.dat"
@@ -37,6 +16,7 @@
 
 // MQTT settings
 #define MQTT_SERVER IPAddress(5, 9, 199, 28)
+#define MQTT_PSK 0
 #define MQTT_PORT 1883
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 #define MQTT_ATTEMPTS 5         // amount of attempts made to connect to MQTT server
