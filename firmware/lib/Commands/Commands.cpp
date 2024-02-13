@@ -2,11 +2,12 @@
 
 std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::readLine()
 {
-    uint64_t timeout{static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000)};
+    uint64_t timeout;
     uint8_t length{0};
     std::array<char, lineMaxLength> buffer{0};
     while (length < lineMaxLength - 1)
     {
+        timeout = static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000);
         while (!Serial.available())
         {
             if (esp_timer_get_time() >= timeout)
