@@ -31,8 +31,13 @@ Message<TIME_CONFIG> Node::currentTimeConfig(const MACAddress& src, uint32_t cTi
 RTC_DATA_ATTR bool initialBoot{true};
 RTC_DATA_ATTR int commPeriods{0};
 
-RTC_DATA_ATTR char ssid[32]{WIFI_SSID};
-RTC_DATA_ATTR char pass[32]{WIFI_PASS};
+RTC_DATA_ATTR char ssid[33]{WIFI_SSID};
+RTC_DATA_ATTR char pass[33]{WIFI_PASS};
+
+RTC_DATA_ATTR char mqttServer[65]{MQTT_SERVER};
+RTC_DATA_ATTR uint32_t mqttPort{MQTT_PORT};
+RTC_DATA_ATTR char mqttIdentity[6]{MQTT_IDENTITY};
+RTC_DATA_ATTR char mqttPsk[65]{MQTT_PSK};
 
 RTC_DATA_ATTR uint32_t defaultSampleInterval{DEFAULT_SAMPLE_INTERVAL};
 RTC_DATA_ATTR uint32_t defaultSampleRounding{DEFAULT_SAMPLE_ROUNDING};
@@ -49,7 +54,7 @@ RTC_DATA_ATTR uint32_t commInterval{DEFAULT_COMM_INTERVAL};
 
 auto lambdaIsLost = [](const Node& e) { return e.getCommInterval() != commInterval; };
 
-Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins), mqttClient{WiFiClient()}, mqtt{PubSubClient(MQTT_SERVER, MQTT_PORT, mqttClient)}
+Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins)
 {
     if (initialBoot)
     {
@@ -309,17 +314,17 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
 
 void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
 
-bool Gateway::mqttConnect()
+Gateway::MQTTClient::MQTTClient() : MQTTClient(mqttServer, mqttPort, mqttIdentity, mqttPsk) {};
+
+bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 {
-    mqtt.setBufferSize(512);
-    char* clientID{lora.getMACAddress().toString()};
     for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
     {
-        if (mqtt.connect(clientID))
+        if (connected())
+            return true;
+        if (connect(clientId.toString()))
             return true;
         delay(MQTT_TIMEOUT);
-        if (mqtt.connected())
-            return true;
     }
     return false;
 }
@@ -340,6 +345,7 @@ void Gateway::uploadPeriod()
         Log::error("WiFi not connected. Aborting upload to MQTT server...");
         return;
     }
+    MQTTClient mqtt;
     size_t nErrors{0}; // amount of errors while uploading
     size_t messagesPublished{0};
     bool upload{true};
@@ -355,7 +361,7 @@ void Gateway::uploadPeriod()
             char topic[topicSize];
             createTopic(topic, message.getSource());
 
-            if (mqtt.connected() || mqttConnect())
+            if (mqtt.clientConnect(lora.getMACAddress()))
             {
                 if (mqtt.publish(topic, &buffer[message.headerLength], message.getLength() - message.headerLength))
                 {
@@ -470,38 +476,42 @@ CommandCode Gateway::Commands::rtcUpdateTime()
     return COMMAND_SUCCESS;
 }
 
+CommandCode Gateway::Commands::changeServer()
+{
+    Serial.println("Enter server URL or IP address:");
+    auto serverBuffer{CommandParser::readLine()};
+    if (!serverBuffer)
+        return COMMAND_ERROR;
+    Serial.println("Enter the server's MQTT port:");
+    auto portBuffer{CommandParser::readLine()};
+    if (!portBuffer)
+        return COMMAND_ERROR;
+    uint32_t port{atoi(portBuffer->data())};
+    Serial.println("Enter the gateway's identity to authenticate with the server:");
+    auto identityBuffer{CommandParser::readLine()};
+    if (!identityBuffer)
+        return COMMAND_ERROR;
+    uint16_t identity{atoi(identityBuffer->data())};
+    Serial.println("Enter the gateway's PSK to authenticate with the server:");
+    auto pskBuffer{CommandParser::readLine()};
+    if (!pskBuffer)
+        return COMMAND_ERROR;
+
+    return COMMAND_SUCCESS;
+
+}
+
 CommandCode Gateway::Commands::discovery()
 {
     parent->discovery();
     return COMMAND_SUCCESS;
 }
 
-CommandCode Gateway::Commands::discoveryLoop(char* arg)
+CommandCode Gateway::Commands::setup()
 {
-    size_t loops{strtoul(arg, nullptr, 10)};
-    while (loops != 0)
-    {
-        esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-        esp_sleep_enable_timer_wakeup(150 * 1000 * 1000);
-        esp_sleep_enable_ext0_wakeup(static_cast<gpio_num_t>(parent->pins.bootPin), 0);
-        Serial.printf("Sleeping 2.5 minutes. Press BOOT pin to exit discovery looping. %u loops left.\n", loops);
-        Serial.flush();
-        esp_light_sleep_start();
-        if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0)
-        {
-            Serial.println("Exiting discovery loop...");
-            return COMMAND_SUCCESS;
-        }
-        parent->discovery();
-        if (parent->nodes.size() >= MAX_SENSOR_NODES)
-        {
-            Serial.printf("Max count of sensor nodes (%u) reached. Exiting discovery loop...\n", MAX_SENSOR_NODES);
-            return COMMAND_SUCCESS;
-        }
-        loops--;
-    }
-    return COMMAND_SUCCESS;
+    
 }
+
 
 CommandCode Gateway::Commands::printSchedule()
 {

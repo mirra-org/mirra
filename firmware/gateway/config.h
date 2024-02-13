@@ -16,8 +16,9 @@
 
 // MQTT settings
 #define MQTT_SERVER IPAddress(5, 9, 199, 28)
-#define MQTT_PSK 0
 #define MQTT_PORT 1883
+#define MQTT_IDENTITY 0
+#define MQTT_PSK 0
 #define TOPIC_PREFIX "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 #define MQTT_ATTEMPTS 5         // amount of attempts made to connect to MQTT server
 #define MQTT_TIMEOUT 1000       // ms, timeout to connect with MQTT server

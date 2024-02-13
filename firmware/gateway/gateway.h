@@ -3,9 +3,10 @@
 
 #include "Commands.h"
 #include "MIRRAModule.h"
-#include "PubSubClient.h"
-#include "WiFi.h"
 #include "config.h"
+#include "WiFi.h"
+#include "WiFiClientSecure.h"
+#include "PubSubClient.h"
 #include <vector>
 
 #define COMM_PERIOD_LENGTH(MAX_MESSAGES) ((MAX_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
@@ -58,6 +59,7 @@ public:
     Gateway(const MIRRAPins& pins);
     void wake();
 
+private:
     struct Commands : CommonCommands
     {
         Gateway* parent;
@@ -67,11 +69,12 @@ public:
         CommandCode changeWifi();
         /// @brief Attempts to configure the local RTC to the correct time using NTP.
         CommandCode rtcUpdateTime();
+        /// @brief Change the associated server to which sensor data will be uploaded. 
+        CommandCode changeServer();
         /// @brief Forces a discovery period.
         CommandCode discovery();
-        /// @brief Sends a discovery message every 2.5 minutes for the specified amount of loops.
-        /// @arg The amount of times to loop.
-        CommandCode discoveryLoop(char* arg);
+        /// @brief Convenience command that configures WiFi, RTC and server settings.
+        CommandCode setup();
         /// @brief Prints scheduling information about the connected nodes, including MAC address, next comm time, sample interval and max number of messages
         /// per comm period.
         CommandCode printSchedule();
@@ -81,14 +84,23 @@ public:
             return std::tuple_cat(CommonCommands::getCommands(),
                                   std::make_tuple(CommandAliasesPair(&Commands::changeWifi, "wifi"), CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
                                                   CommandAliasesPair(&Commands::discovery, "discovery"),
-                                                  CommandAliasesPair(&Commands::discoveryLoop, "discoveryloop"),
                                                   CommandAliasesPair(&Commands::printSchedule, "printschedule")));
         }
     };
 
-private:
-    WiFiClient mqttClient;
-    PubSubClient mqtt;
+    class MQTTClient : public PubSubClient
+    {
+        WiFiClientSecure wifi;
+
+        public:
+        MQTTClient(const char* url, uint16_t port, const char* identity, const char* psk) : PubSubClient{url, port, wifi} {wifi.setPreSharedKey(identity, psk); setBufferSize(512);};
+        MQTTClient();
+
+        /// @brief Attempts to connect to the designated MQTT server.
+        /// @param clientId The MAC address to use as a client ID while connecting.
+        /// @return Whether the connection was successful or not.
+        bool clientConnect(const MACAddress& clientId);
+    };
 
     std::vector<Node> nodes;
     /// @brief Returns the local node corresponding to the MAC address.
@@ -117,10 +129,7 @@ private:
     /// @return Whether the communication period was successful or not.
     bool nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data);
 
-    /// @brief Attempts to connect to the designated MQTT server.
-    /// @return Whether the connection was successful or not.
-    bool mqttConnect();
-    const size_t topicSize = sizeof(TOPIC_PREFIX) + MACAddress::stringLength + MACAddress::stringLength;
+    static constexpr size_t topicSize = sizeof(TOPIC_PREFIX) + MACAddress::stringLength + MACAddress::stringLength;
     /// @brief Creates a topic string with the following layout: "(TOPIC_PREFIX)/(MAC address gateway)/(MAC address node)"
     /// @param topic The topic string.
     /// @param nodeMAC The associated node's MAC address.
