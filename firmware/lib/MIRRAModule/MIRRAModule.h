@@ -39,6 +39,11 @@ protected:
     /// @brief Initialises the MIRRAModule, RTC, LoRa and logging modules.
     /// @param pins The pin configuration for the MIRRAModule.
     MIRRAModule(const MIRRAPins& pins);
+
+    MIRRAModule(const MIRRAModule&) = delete;
+    MIRRAModule& operator=(const MIRRAModule&) = delete;
+    ~MIRRAModule() = default;
+    
     /// @brief Stores the given sensor data message into the module's flash filesystem. The first type byte of the message is replaced with an 'upload' flag, at
     /// first set to 0.
     /// @param m The message to be stored.
