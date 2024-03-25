@@ -169,7 +169,7 @@ void Gateway::nodesFromFile()
 {
     Log::debug("Recovering nodes from file...");
     File nodesFile{LittleFS.open(NODES_FP)};
-    uint8_t size{nodesFile.read()};
+    uint8_t size = nodesFile.read();
     Log::debug(size, " nodes found in ", NODES_FP);
     nodes.resize(size);
     nodesFile.read((uint8_t*)nodes.data(), static_cast<size_t>(size) * sizeof(Node));
@@ -486,12 +486,12 @@ CommandCode Gateway::Commands::changeServer()
     auto portBuffer{CommandParser::readLine()};
     if (!portBuffer)
         return COMMAND_ERROR;
-    uint32_t port{atoi(portBuffer->data())};
+    uint32_t port = atoi(portBuffer->data());
     Serial.println("Enter the gateway's identity to authenticate with the server:");
     auto identityBuffer{CommandParser::readLine()};
     if (!identityBuffer)
         return COMMAND_ERROR;
-    uint16_t identity{atoi(identityBuffer->data())};
+    uint16_t identity = atoi(identityBuffer->data());
     Serial.println("Enter the gateway's PSK to authenticate with the server:");
     auto pskBuffer{CommandParser::readLine()};
     if (!pskBuffer)
@@ -509,7 +509,7 @@ CommandCode Gateway::Commands::discovery()
 
 CommandCode Gateway::Commands::setup()
 {
-    
+    return COMMAND_SUCCESS;
 }
 
 
