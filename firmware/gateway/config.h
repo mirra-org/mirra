@@ -15,7 +15,7 @@
 #define NTP_URL "be.pool.ntp.org"
 
 // MQTT settings
-#define MQTT_SERVER IPAddress(5, 9, 199, 28)
+#define MQTT_SERVER "mirra.ugent.be"
 #define MQTT_PORT 1883
 #define MQTT_IDENTITY 0
 #define MQTT_PSK 0
