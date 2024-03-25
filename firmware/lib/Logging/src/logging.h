@@ -30,16 +30,15 @@ private:
     tm logfileTime{0};
     /// @brief Currently loaded logging file. Should be opened in append mode.
     File logfile{};
-    /// @brief Days to keep a logging file in the filesystem.
-    static constexpr size_t daysToKeep{7};
+    /// @brief Maximum size (in KiB) that all logging files should occupy.
+    static constexpr size_t maxSize{1024};
 
     /// @brief Generates a logfile path from a time struct.
     /// @param buffer Buffer to which to write the logfile path.
     /// @param time Time for which to generate a logfile path.
     void generateLogfilePath(char* buffer, const struct tm& time);
-    /// @brief Removes all logfiles that have reached the expiry date by a given date.
-    /// @param time Date from which logfile expiration is calculated according to daysToKeep.
-    void removeOldLogfiles(struct tm& time);
+    /// @brief Removes logfiles until maxSize is respected (oldest first).
+    void pruneLogfiles();
     /// @brief Opens/creates a logfile with the given date.
     /// @param time The date for which to open/create a logfile.
     void openLogfile(const struct tm& time);

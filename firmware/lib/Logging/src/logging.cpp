@@ -4,41 +4,60 @@ Log Log::log{};
 
 void Log::generateLogfilePath(char* buffer, const struct tm& time) { strftime(buffer, 16, "/%Y-%m-%d.log", &time); }
 
-void Log::removeOldLogfiles(struct tm& time)
+void Log::pruneLogfiles()
 {
-    time_t deleteEpoch{mktime(&time) - static_cast<time_t>(daysToKeep * 24 * 60 * 60)};
-    tm deleteTime;
-    gmtime_r(&deleteEpoch, &deleteTime);
-    tm fileTime{0};
-    File root = LittleFS.open("/");
-    File file = root.openNextFile();
-    while (file)
+    struct LogFile
     {
-        const char* fileName{file.name()};
-        file.close();
-        const char* extension;
-        if (extension = strstr(fileName, ".log"))
+        char path[16];
+        size_t size;
+
+        bool operator<(const LogFile& other) { return strcmp(this->path, other.path) < 0;}
+    };
+    
+    std::vector<LogFile> logFiles;
+    logFiles.reserve(32);
+    size_t logfileSizeSum{0};
+    File root = LittleFS.open("/");
+    size_t logfilesCount{0};
+    while(true)
+    {
+        File file = root.openNextFile();
+        if (!file)
+            break;
+        const char* filePath{file.path()};
+        if (strstr(filePath, ".log"))
         {
-            strptime(&extension[-10], "%Y-%m-%d.log", &fileTime);
-            if ((fileTime.tm_year < deleteTime.tm_year) || (fileTime.tm_year == deleteTime.tm_year && fileTime.tm_mon < deleteTime.tm_mon) ||
-                (fileTime.tm_year == deleteTime.tm_year && fileTime.tm_mon == deleteTime.tm_mon && fileTime.tm_mday < deleteTime.tm_mday))
-            {
-                char buffer[32]{0};
-                snprintf(buffer, sizeof(buffer), "/%s", fileName);
-                if (!LittleFS.remove(buffer))
-                    this->error("Could not remove logfile '", buffer, "'.");
-                else
-                    this->info("Removed old logfile '", buffer, "'.");
-            }
+            LogFile& logFile = logFiles.emplace_back();
+            strncpy(logFile.path, filePath, sizeof(logFile.path));
+            logFile.size = file.size();
+            logfileSizeSum += logFile.size;
+            logfilesCount++;
         }
-        file = root.openNextFile();
+        file.close();
     }
     root.close();
+    if (logfilesCount < 1 || logfileSizeSum <= maxSize)
+        return;
+    std::sort(std::begin(logFiles), std::end(logFiles));
+    for (const auto& logFile : logFiles)
+    { 
+        if (!LittleFS.remove(logFile.path))
+            this->error("Could not remove logfile '", logFile.path, "'.");
+        else
+            this->info("Removed old logfile '", logFile.path, "'.");
+        logfileSizeSum -= logFile.size;
+        if (logfileSizeSum <= maxSize)
+        {
+            this->info("Logfiles pruned to ", logfileSizeSum / 1024, "KiB");
+            break;
+        }
+    }
+    
 }
 
 void Log::openLogfile(const struct tm& time)
 {
-    char logfilePath[32];
+    char logfilePath[16];
     generateLogfilePath(logfilePath, time);
     if (LittleFS.exists(logfilePath))
     {
@@ -68,7 +87,7 @@ void Log::manageLogfile(struct tm& time)
         openLogfile(time);
         if (!this->logfile)
             return;
-        removeOldLogfiles(time);
+        pruneLogfiles();
     }
 }
 
