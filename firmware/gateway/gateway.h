@@ -3,10 +3,10 @@
 
 #include "Commands.h"
 #include "MIRRAModule.h"
-#include "config.h"
+#include "PubSubClient.h"
 #include "WiFi.h"
 #include "WiFiClientSecure.h"
-#include "PubSubClient.h"
+#include "config.h"
 #include <vector>
 
 #define COMM_PERIOD_LENGTH(MAX_MESSAGES) ((MAX_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
@@ -69,8 +69,12 @@ private:
         CommandCode changeWifi();
         /// @brief Attempts to configure the local RTC to the correct time using NTP.
         CommandCode rtcUpdateTime();
-        /// @brief Change the associated server to which sensor data will be uploaded. 
+        /// @brief  @brief Resets the local RTC time to 2000-01-01 00:00:00.
+        CommandCode rtcReset();
+        /// @brief Change the associated server to which sensor data will be uploaded.
         CommandCode changeServer();
+        /// @brief Change settings like communication and sampling interval.
+        CommandCode changeIntervals();
         /// @brief Forces a discovery period.
         CommandCode discovery();
         /// @brief Convenience command that configures WiFi, RTC and server settings.
@@ -83,7 +87,7 @@ private:
         {
             return std::tuple_cat(CommonCommands::getCommands(),
                                   std::make_tuple(CommandAliasesPair(&Commands::changeWifi, "wifi"), CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
-                                                  CommandAliasesPair(&Commands::discovery, "discovery"),
+                                                  CommandAliasesPair(&Commands::rtcReset, "rtcreset"), CommandAliasesPair(&Commands::discovery, "discovery"),
                                                   CommandAliasesPair(&Commands::printSchedule, "printschedule")));
         }
     };
@@ -92,8 +96,12 @@ private:
     {
         WiFiClientSecure wifi;
 
-        public:
-        MQTTClient(const char* url, uint16_t port, const char* identity, const char* psk) : PubSubClient{url, port, wifi} {wifi.setPreSharedKey(identity, psk); setBufferSize(512);};
+    public:
+        MQTTClient(const char* url, uint16_t port, const char* identity, const char* psk) : PubSubClient{url, port, wifi}
+        {
+            wifi.setPreSharedKey(identity, psk);
+            setBufferSize(512);
+        };
         MQTTClient();
 
         /// @brief Attempts to connect to the designated MQTT server.
@@ -116,7 +124,7 @@ private:
     /// @brief Updates the nodes stored on the local filesystem. Used to retain the Nodes objects through deep sleep.
     void updateNodesFile();
 
-    void removeNode(Node&) {};
+    void removeNode(Node&){};
 
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();

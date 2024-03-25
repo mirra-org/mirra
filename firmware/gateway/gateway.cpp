@@ -39,9 +39,9 @@ RTC_DATA_ATTR uint16_t mqttPort{MQTT_PORT};
 RTC_DATA_ATTR char mqttIdentity[6]{MQTT_IDENTITY};
 RTC_DATA_ATTR char mqttPsk[65]{MQTT_PSK};
 
-RTC_DATA_ATTR uint32_t defaultSampleInterval{DEFAULT_SAMPLE_INTERVAL};
-RTC_DATA_ATTR uint32_t defaultSampleRounding{DEFAULT_SAMPLE_ROUNDING};
-RTC_DATA_ATTR uint32_t defaultSampleOffset{DEFAULT_SAMPLE_OFFSET};
+RTC_DATA_ATTR uint32_t sampleInterval{DEFAULT_SAMPLE_INTERVAL};
+RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLE_ROUNDING};
+RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLE_OFFSET};
 RTC_DATA_ATTR uint32_t commInterval{DEFAULT_COMM_INTERVAL};
 
 // TODO: Instead of using this lambda to determine if a node is lost, use a bool stored in each node that
@@ -98,12 +98,12 @@ std::optional<std::reference_wrapper<Node>> Gateway::macToNode(const MACAddress&
         if (mac == n.getMACAddress())
             return std::make_optional(std::ref(n));
     }
-    Log::error("No node found for ", mac.toString());
     return std::nullopt;
 }
 
 void Gateway::discovery()
 {
+    Log::info("Starting discovery...");
     while (true)
     {
         if (nodes.size() >= MAX_SENSOR_NODES)
@@ -111,7 +111,7 @@ void Gateway::discovery()
             Log::info("Could not run discovery because maximum amount of nodes has been reached.");
             return;
         }
-        Log::info("Awaiting discovery message ...");
+        Log::info("Awaiting discovery message...");
         auto hello{lora.listenMessage<HELLO>(DISCOVERY_TIMEOUT, pins.bootPin)};
         if (!hello)
         {
@@ -135,19 +135,12 @@ void Gateway::discovery()
         }
         else
         {
-            uint32_t sampleInterval{defaultSampleInterval}, sampleRounding{defaultSampleRounding}, sampleOffset{defaultSampleOffset};
             uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
-            Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
-                                            candidate,
-                                            cTime,
-                                            sampleInterval,
-                                            sampleRounding,
-                                            sampleOffset,
-                                            commInterval,
-                                            commTime,
-                                            MAX_MESSAGES(commInterval, sampleInterval)};
+            Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), candidate,      cTime,
+                                            sampleInterval,       sampleRounding, sampleOffset,
+                                            commInterval,         commTime,       MAX_MESSAGES(commInterval, sampleInterval)};
             Log::debug("Time config constructed. cTime = ", cTime, " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
-                " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
+                       " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
             nodes.emplace_back(timeConfig);
             lora.sendMessage(timeConfig);
         }
@@ -155,7 +148,7 @@ void Gateway::discovery()
         if (!timeAck)
         {
             Log::error("Error while receiving ack to time config message from ", candidate.toString(), ". Aborting discovery.");
-            if(duplicate)
+            if (duplicate)
                 removeNode(duplicate->get());
             else
                 nodes.pop_back();
@@ -310,13 +303,11 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
         return;
     }
     Log::info("Connected to WiFi.");
-    strncpy(ssid, SSID, sizeof(ssid));
-    strncpy(pass, password, sizeof(pass));
 }
 
 void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
 
-Gateway::MQTTClient::MQTTClient() : MQTTClient(mqttServer, mqttPort, mqttIdentity, mqttPsk) {};
+Gateway::MQTTClient::MQTTClient() : MQTTClient(mqttServer, mqttPort, mqttIdentity, mqttPsk){};
 
 bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 {
@@ -440,6 +431,8 @@ CommandCode Gateway::Commands::changeWifi()
     if (WiFi.status() == WL_CONNECTED)
     {
         WiFi.disconnect();
+        strncpy(ssid, ssid_buffer->data(), sizeof(ssid));
+        strncpy(pass, pass_buffer->data(), sizeof(pass));
         Serial.println("WiFi connected! This WiFi network has been set as the default.");
     }
     else
@@ -455,21 +448,24 @@ CommandCode Gateway::Commands::rtcUpdateTime()
     if (WiFi.status() == WL_CONNECTED)
     {
         esp_netif_init();
+        if (sntp_enabled())
+            sntp_stop();
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, NTP_URL);
+        sntp_set_sync_interval(15000);
         sntp_init();
-        int64_t timeout{esp_timer_get_time() + 10 * 1000 * 1000};
+        int64_t timeout{esp_timer_get_time() + 20 * 1000 * 1000};
         while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
         {
             if (esp_timer_get_time() > timeout)
             {
-                Serial.println("Failed to update system time within 10s timeout.");
+                Serial.println("Failed to update system time within 20s timeout. ");
+                sntp_stop();
                 WiFi.disconnect();
                 return COMMAND_ERROR;
             }
         }
-        if (sntp_enabled())
-            sntp_stop();
+        sntp_stop();
         Serial.println("Writing time to RTC...");
         parent->rtc.writeTime(parent->rtc.getSysTime());
         Serial.println("RTC and system time updated.");
@@ -478,23 +474,30 @@ CommandCode Gateway::Commands::rtcUpdateTime()
     return COMMAND_SUCCESS;
 }
 
+CommandCode Gateway::Commands::rtcReset()
+{
+    Serial.println("Setting time to 2000-01-01 00:00:00...");
+    parent->rtc.writeTime(946684800); // 2000-01-01
+    parent->rtc.setSysTime();
+    return COMMAND_ERROR;
+}
+
 CommandCode Gateway::Commands::changeServer()
 {
-    Serial.println("Enter server URL or IP address:");
+    Serial.printf("Enter server URL or IP address (current: '%s') :\n", mqttServer);
     auto serverBuffer{CommandParser::readLine()};
     if (!serverBuffer)
         return COMMAND_ERROR;
-    Serial.println("Enter the server's MQTT port:");
+    Serial.printf("Enter the server's MQTT port (current: '%u') :\n", mqttPort);
     auto portBuffer{CommandParser::readLine()};
     if (!portBuffer)
         return COMMAND_ERROR;
     uint16_t port = atoi(portBuffer->data());
-    Serial.println("Enter the gateway's identity to authenticate with the server:");
+    Serial.printf("Enter the gateway's identity to authenticate with the server (current: '%s') :\n", mqttIdentity);
     auto identityBuffer{CommandParser::readLine()};
     if (!identityBuffer)
         return COMMAND_ERROR;
-    uint16_t identity = atoi(identityBuffer->data());
-    Serial.println("Enter the gateway's PSK to authenticate with the server:");
+    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n", mqttPsk);
     auto pskBuffer{CommandParser::readLine()};
     if (!pskBuffer)
         return COMMAND_ERROR;
@@ -507,11 +510,24 @@ CommandCode Gateway::Commands::changeServer()
         strncpy(mqttIdentity, identityBuffer->data(), sizeof(mqttIdentity));
         strncpy(mqttPsk, pskBuffer->data(), sizeof(mqttPsk));
         Serial.println("Connection to provided server successful. Configuration has been changed.");
+        Serial.printf("mqttServer: %s\n", mqttServer);
+        Serial.printf("mqttPort: %u\n", mqttPort);
+        Serial.printf("mqttIdentity: %s\n", mqttIdentity);
+        Serial.printf("mqttPsk: %s\n", mqttPsk);
         return COMMAND_SUCCESS;
     }
     Serial.println("Could not connect to the provided server. Configuration has not been changed.");
     return COMMAND_SUCCESS;
-    
+}
+
+CommandCode Gateway::Commands::changeIntervals()
+{
+    Serial.printf("Enter communication interval in seconds (current: '%u') : ", commInterval);
+    auto commIntervalBuffer{CommandParser::readLine()};
+    if (!commIntervalBuffer)
+        return COMMAND_ERROR;
+    Serial.printf("Enter communication interval in seconds (current: '%u') : ", sampleInterval);
+    return COMMAND_SUCCESS;
 }
 
 CommandCode Gateway::Commands::discovery()
@@ -525,9 +541,10 @@ CommandCode Gateway::Commands::setup()
     changeWifi();
     rtcUpdateTime();
     changeServer();
+    changeIntervals();
+    discovery();
     return COMMAND_SUCCESS;
 }
-
 
 CommandCode Gateway::Commands::printSchedule()
 {
