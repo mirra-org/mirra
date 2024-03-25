@@ -129,7 +129,7 @@ std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t 
     // We use the timer wakeup as timeout for receiving a LoRa reply.
     esp_sleep_enable_timer_wakeup((timeoutMs) * 1000);
     // Also use the wake pin to force wake-up
-    esp_sleep_enable_ext1_wakeup(0x1 << wakePin, ESP_EXT1_WAKEUP_ANY_HIGH);
+    esp_sleep_enable_ext1_wakeup(0x1 << wakePin, ESP_EXT1_WAKEUP_ALL_LOW);
         Log::debug("Starting receive ...");
         int state{this->startReceive()};
 

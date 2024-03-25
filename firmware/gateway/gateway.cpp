@@ -111,12 +111,15 @@ void Gateway::discovery()
             Log::info("Could not run discovery because maximum amount of nodes has been reached.");
             return;
         }
-        Log::debug("Awaiting discovery message ...");
+        Log::info("Awaiting discovery message ...");
         auto hello{lora.listenMessage<HELLO>(DISCOVERY_TIMEOUT, pins.bootPin)};
         if (!hello)
         {
-            if (digitalRead(pins.bootPin))
+            if (esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT1)
+            {
+                Log::info("Discovery aborted with BOOT button.");
                 return;
+            }
             continue;
         }
         MACAddress candidate = hello->getSource();
