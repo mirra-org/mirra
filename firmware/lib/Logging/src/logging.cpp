@@ -42,10 +42,14 @@ void Log::pruneLogfiles()
     for (const auto& logFile : logFiles)
     { 
         if (!LittleFS.remove(logFile.path))
+        {
             this->error("Could not remove logfile '", logFile.path, "'.");
+        }
         else
+        {
             this->info("Removed old logfile '", logFile.path, "'.");
-        logfileSizeSum -= logFile.size;
+            logfileSizeSum -= logFile.size;
+        }
         if (logfileSizeSum <= maxSize)
         {
             this->info("Logfiles pruned to ", logfileSizeSum / 1024, "KiB");
