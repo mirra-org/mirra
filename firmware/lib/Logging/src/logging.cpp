@@ -36,7 +36,7 @@ void Log::pruneLogfiles()
         file.close();
     }
     root.close();
-    if (logfilesCount < 1 || logfileSizeSum <= maxSize)
+    if (logfilesCount < 1 || logfileSizeSum <= maxSize * 1024)
         return;
     std::sort(std::begin(logFiles), std::end(logFiles));
     for (const auto& logFile : logFiles)
@@ -50,7 +50,7 @@ void Log::pruneLogfiles()
             this->info("Removed old logfile '", logFile.path, "'.");
             logfileSizeSum -= logFile.size;
         }
-        if (logfileSizeSum <= maxSize)
+        if (logfileSizeSum <= maxSize * 1024)
         {
             this->info("Logfiles pruned to ", logfileSizeSum / 1024, "KiB");
             break;
