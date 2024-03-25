@@ -35,7 +35,7 @@ RTC_DATA_ATTR char ssid[33]{WIFI_SSID};
 RTC_DATA_ATTR char pass[33]{WIFI_PASS};
 
 RTC_DATA_ATTR char mqttServer[65]{MQTT_SERVER};
-RTC_DATA_ATTR uint32_t mqttPort{MQTT_PORT};
+RTC_DATA_ATTR uint16_t mqttPort{MQTT_PORT};
 RTC_DATA_ATTR char mqttIdentity[6]{MQTT_IDENTITY};
 RTC_DATA_ATTR char mqttPsk[65]{MQTT_PSK};
 
@@ -63,8 +63,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins)
         updateNodesFile();
         if (!LittleFS.exists(DATA_FP))
         {
-            File dataFile{LittleFS.open(DATA_FP, "w", true)};
-            dataFile.close();
+            LittleFS.open(DATA_FP, "w", true).close();
         }
 
         Commands(this).rtcUpdateTime();
@@ -345,7 +344,7 @@ void Gateway::uploadPeriod()
         Log::error("WiFi not connected. Aborting upload to MQTT server...");
         return;
     }
-    MQTTClient mqtt;
+    MQTTClient mqtt{mqttServer, mqttPort, mqttIdentity, mqttPsk};
     size_t nErrors{0}; // amount of errors while uploading
     size_t messagesPublished{0};
     bool upload{true};
@@ -486,7 +485,7 @@ CommandCode Gateway::Commands::changeServer()
     auto portBuffer{CommandParser::readLine()};
     if (!portBuffer)
         return COMMAND_ERROR;
-    uint32_t port = atoi(portBuffer->data());
+    uint16_t port = atoi(portBuffer->data());
     Serial.println("Enter the gateway's identity to authenticate with the server:");
     auto identityBuffer{CommandParser::readLine()};
     if (!identityBuffer)
@@ -497,8 +496,19 @@ CommandCode Gateway::Commands::changeServer()
     if (!pskBuffer)
         return COMMAND_ERROR;
 
+    MQTTClient client{serverBuffer->data(), port, identityBuffer->data(), pskBuffer->data()};
+    if (client.clientConnect(parent->lora.getMACAddress()))
+    {
+        strncpy(mqttServer, serverBuffer->data(), sizeof(mqttServer));
+        mqttPort = port;
+        strncpy(mqttIdentity, identityBuffer->data(), sizeof(mqttIdentity));
+        strncpy(mqttPsk, pskBuffer->data(), sizeof(mqttPsk));
+        Serial.println("Connection to provided server successful. Configuration has been changed.");
+        return COMMAND_SUCCESS;
+    }
+    Serial.println("Could not connect to the provided server. Configuration has not been changed.");
     return COMMAND_SUCCESS;
-
+    
 }
 
 CommandCode Gateway::Commands::discovery()
@@ -509,6 +519,9 @@ CommandCode Gateway::Commands::discovery()
 
 CommandCode Gateway::Commands::setup()
 {
+    changeWifi();
+    rtcUpdateTime();
+    changeServer();
     return COMMAND_SUCCESS;
 }
 
