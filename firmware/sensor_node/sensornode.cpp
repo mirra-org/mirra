@@ -125,7 +125,6 @@ void SensorNode::initSensors()
     addSensor(std::make_unique<TempSHTSensor>());
     addSensor(std::make_unique<HumiSHTSensor>(*reinterpret_cast<TempSHTSensor*>(sensors[nSensors - 1].get())));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
-    addSensor(std::make_unique<ESPCamUART>(&Serial1, CAM_PIN));
 }
 
 void SensorNode::clearSensors()
