@@ -47,7 +47,7 @@ template <class T> typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_
             auto newValue{parseNum<T>(buffer->data())};
             if (newValue)
             {
-                value = newValue;
+                value = *newValue;
                 return true;
             }
             else
