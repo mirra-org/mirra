@@ -137,4 +137,11 @@ CommandCode CommonCommands::echo(const char* arg)
     return COMMAND_SUCCESS;
 }
 
+CommandCode CommonCommands::echoNum(int arg)
+{
+    Serial.print(arg);
+    Serial.print('\n');
+    return COMMAND_SUCCESS;
+}
+
 CommandCode CommonCommands::exit() { return COMMAND_EXIT; }
