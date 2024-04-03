@@ -83,8 +83,7 @@ public:
     template <MessageType T>
     std::optional<Message<T>> receiveMessage(uint32_t timeoutMs, size_t repeatAttempts = 0, const MACAddress& src = MACAddress::broadcast,
                                              uint32_t listenMs = 0, bool promiscuous = false);
-    template <MessageType T>
-    std::optional<Message<T>> listenMessage(uint32_t timeoutMs, uint8_t wakePin);
+    template <MessageType T> std::optional<Message<T>> listenMessage(uint32_t timeoutMs, uint8_t wakePin);
 };
 
 #include <LoRaModule.tpp>

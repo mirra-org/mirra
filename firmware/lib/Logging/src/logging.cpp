@@ -11,15 +11,15 @@ void Log::pruneLogfiles()
         char path[16];
         size_t size;
 
-        bool operator<(const LogFile& other) { return strcmp(this->path, other.path) < 0;}
+        bool operator<(const LogFile& other) { return strcmp(this->path, other.path) < 0; }
     };
-    
+
     std::vector<LogFile> logFiles;
     logFiles.reserve(32);
     size_t logfileSizeSum{0};
     File root = LittleFS.open("/");
     size_t logfilesCount{0};
-    while(true)
+    while (true)
     {
         File file = root.openNextFile();
         if (!file)
@@ -40,7 +40,7 @@ void Log::pruneLogfiles()
         return;
     std::sort(std::begin(logFiles), std::end(logFiles));
     for (const auto& logFile : logFiles)
-    { 
+    {
         if (!LittleFS.remove(logFile.path))
         {
             this->error("Could not remove logfile '", logFile.path, "'.");
@@ -53,10 +53,9 @@ void Log::pruneLogfiles()
         if (logfileSizeSum <= maxSize * 1024)
         {
             this->info("Logfiles pruned to ", logfileSizeSum / 1024, "KiB");
-            break;
+            return;
         }
     }
-    
 }
 
 void Log::openLogfile(const struct tm& time)
