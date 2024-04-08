@@ -1,7 +1,6 @@
 #include "gateway.h"
-#include "esp_netif.h"
-#include "esp_sntp.h"
 #include <cstring>
+#include <sntp.h>
 
 void Node::timeConfig(Message<TIME_CONFIG>& m)
 {
@@ -418,21 +417,21 @@ void Gateway::parseNodeUpdate(char* update)
 
 CommandCode Gateway::Commands::changeWifi()
 {
-    Serial.println("Enter WiFi SSID:");
-
-    auto ssid_buffer{CommandParser::readLine()};
-    if (!ssid_buffer)
+    Serial.printf("Enter WiFi SSID (current: '%s') :\n", ssid);
+    auto ssidBuffer{CommandParser::readLine()};
+    if (!ssidBuffer)
         return COMMAND_ERROR;
     Serial.println("Enter WiFi password:");
-    auto pass_buffer{CommandParser::readLine()};
-    if (!pass_buffer)
+    auto passBuffer{CommandParser::readLine()};
+    if (!passBuffer)
         return COMMAND_ERROR;
-    parent->wifiConnect(ssid_buffer->data(), pass_buffer->data());
+
+    parent->wifiConnect(ssidBuffer->data(), passBuffer->data());
     if (WiFi.status() == WL_CONNECTED)
     {
         WiFi.disconnect();
-        strncpy(ssid, ssid_buffer->data(), sizeof(ssid));
-        strncpy(pass, pass_buffer->data(), sizeof(pass));
+        strncpy(ssid, ssidBuffer->data(), sizeof(ssid));
+        strncpy(pass, passBuffer->data(), sizeof(pass));
         Serial.println("WiFi connected! This WiFi network has been set as the default.");
     }
     else
@@ -445,30 +444,22 @@ CommandCode Gateway::Commands::changeWifi()
 CommandCode Gateway::Commands::rtcUpdateTime()
 {
     parent->wifiConnect();
+    Log::info("Fetching NTP time.");
     if (WiFi.status() == WL_CONNECTED)
     {
-        esp_netif_init();
-        if (sntp_enabled())
-            sntp_stop();
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, NTP_URL);
         sntp_set_sync_interval(15000);
         sntp_init();
-        int64_t timeout{esp_timer_get_time() + 20 * 1000 * 1000};
         while (sntp_get_sync_status() != SNTP_SYNC_STATUS_COMPLETED)
         {
-            if (esp_timer_get_time() > timeout)
-            {
-                Serial.println("Failed to update system time within 20s timeout. ");
-                sntp_stop();
-                WiFi.disconnect();
-                return COMMAND_ERROR;
-            }
+            delay(500);
+            Serial.print(".");
         }
-        sntp_stop();
-        Serial.println("Writing time to RTC...");
+        Serial.println("\nWriting time to RTC...");
         parent->rtc.writeTime(parent->rtc.getSysTime());
-        Serial.println("RTC and system time updated.");
+        Log::info("RTC and system time updated.");
+        sntp_stop();
     }
     WiFi.disconnect();
     return COMMAND_SUCCESS;
@@ -479,7 +470,34 @@ CommandCode Gateway::Commands::rtcReset()
     Serial.println("Setting time to 2000-01-01 00:00:00...");
     parent->rtc.writeTime(946684800); // 2000-01-01
     parent->rtc.setSysTime();
-    return COMMAND_ERROR;
+    return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::rtcSet()
+{
+    time_t ctime{time(nullptr)};
+    tm* curTm{gmtime(&ctime)};
+    char timeStr[20]{0};
+    strftime(timeStr, sizeof(timeStr), "%F %T", curTm);
+    Serial.printf("Enter new time (current: '%s') :\n", timeStr);
+    auto timeBuffer{CommandParser::readLine()};
+    if (!timeBuffer)
+        return COMMAND_ERROR;
+    tm tm{};
+    if (strptime(timeBuffer->data(), "%F %T", &tm) == nullptr)
+    {
+        Serial.printf("Could not parse '%s' as a date/time value. Ensure the format '2000-03-23 14:32:01' is respected.\n", timeBuffer->data());
+        return COMMAND_ERROR;
+    }
+    else
+    {
+        strftime(timeStr, sizeof(timeStr), "%F %T", &tm);
+        Serial.printf("New time successfully set to '%s'\n", timeStr);
+    }
+    ctime = mktime(&tm);
+    parent->rtc.writeTime(static_cast<uint32_t>(ctime));
+    parent->rtc.setSysTime();
+    return COMMAND_SUCCESS;
 }
 
 CommandCode Gateway::Commands::changeServer()
@@ -489,10 +507,9 @@ CommandCode Gateway::Commands::changeServer()
     if (!serverBuffer)
         return COMMAND_ERROR;
     Serial.printf("Enter the server's MQTT port (current: '%u') :\n", mqttPort);
-    auto portBuffer{CommandParser::readLine()};
-    if (!portBuffer)
+    uint16_t port{mqttPort};
+    if (!CommandParser::editValue(port))
         return COMMAND_ERROR;
-    uint16_t port = atoi(portBuffer->data());
     Serial.printf("Enter the gateway's identity to authenticate with the server (current: '%s') :\n", mqttIdentity);
     auto identityBuffer{CommandParser::readLine()};
     if (!identityBuffer)
@@ -526,7 +543,19 @@ CommandCode Gateway::Commands::changeIntervals()
     auto commIntervalBuffer{CommandParser::readLine()};
     if (!commIntervalBuffer)
         return COMMAND_ERROR;
-    Serial.printf("Enter communication interval in seconds (current: '%u') : ", sampleInterval);
+    Serial.printf("Enter sample interval in seconds (current: '%u') : ", sampleInterval);
+    auto sampleIntervalBuffer{CommandParser::readLine()};
+    if (!sampleIntervalBuffer)
+        return COMMAND_ERROR;
+    Serial.printf("Enter sample rounding in seconds (current: '%u') : ", sampleRounding);
+    auto sampleRoundingBuffer{CommandParser::readLine()};
+    if (!sampleRoundingBuffer)
+        return COMMAND_ERROR;
+    Serial.printf("Enter sample offset in seconds (current: '%u') : ", sampleOffset);
+    auto sampleOffsetBuffer{CommandParser::readLine()};
+    if (!sampleOffsetBuffer)
+        return COMMAND_ERROR;
+
     return COMMAND_SUCCESS;
 }
 
