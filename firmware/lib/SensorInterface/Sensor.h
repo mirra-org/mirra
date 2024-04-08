@@ -35,6 +35,8 @@ public:
     virtual SensorValue getMeasurement() = 0;
     /// @return The sensor's type ID.
     virtual uint8_t getID() const = 0;
+    /// @return The sensor's name
+    virtual const char* getName() const { return "Unnamed Sensor"; };
     /// @brief Updates the sensor's next sample time according to the sensor-specific algorithm. (usually simply addition)
     /// @param sampleInterval Sample interval with which to update.
     virtual void updateNextSampleTime(uint32_t sampleInterval) { this->nextSampleTime += sampleInterval; };
