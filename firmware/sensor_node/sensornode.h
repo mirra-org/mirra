@@ -1,7 +1,6 @@
 #ifndef __SENSORNODE_H__
 #define __SENSORNODE_H__
 
-#include "Commands.h"
 #include "MIRRAModule.h"
 #include "config.h"
 #include <vector>
@@ -12,11 +11,10 @@ public:
     SensorNode(const MIRRAPins& pins);
     void wake();
 
-    struct Commands : CommonCommands
+    struct Commands : MIRRAModule::Commands
     {
         SensorNode* parent;
         Commands(SensorNode* parent) : parent{parent} {};
-
         /// @brief Forces a discovery period.
         CommandCode discovery();
         /// @brief Forcefully initiates a sample period. This samples the sensors and stores the resulting data in the local data file, which will be sent to
@@ -30,7 +28,7 @@ public:
 
         static constexpr auto getCommands()
         {
-            return std::tuple_cat(CommonCommands::getCommands(),
+            return std::tuple_cat(MIRRAModule::Commands::getCommands(),
                                   std::make_tuple(CommandAliasesPair(&Commands::discovery, "discovery"), CommandAliasesPair(&Commands::sample, "sample"),
                                                   CommandAliasesPair(&Commands::printSample, "printsample"),
                                                   CommandAliasesPair(&Commands::printSchedule, "printschedule")));

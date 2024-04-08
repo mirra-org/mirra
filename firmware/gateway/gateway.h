@@ -1,7 +1,6 @@
 #ifndef __GATEWAY_H__
 #define __GATEWAY_H__
 
-#include "Commands.h"
 #include "MIRRAModule.h"
 #include "PubSubClient.h"
 #include "WiFi.h"
@@ -60,7 +59,7 @@ public:
     void wake();
 
 private:
-    struct Commands : CommonCommands
+    struct Commands : MIRRAModule::Commands
     {
         Gateway* parent;
         Commands(Gateway* parent) : parent{parent} {};
@@ -69,8 +68,10 @@ private:
         CommandCode changeWifi();
         /// @brief Attempts to configure the local RTC to the correct time using NTP.
         CommandCode rtcUpdateTime();
-        /// @brief  @brief Resets the local RTC time to 2000-01-01 00:00:00.
+        /// @brief  Resets the local RTC time to 2000-01-01 00:00:00.
         CommandCode rtcReset();
+        /// @brief Forcibly sets the time. Input must be expressed like '2000-03-23 14:32:01'.
+        CommandCode rtcSet();
         /// @brief Change the associated server to which sensor data will be uploaded.
         CommandCode changeServer();
         /// @brief Change settings like communication and sampling interval.
@@ -85,9 +86,10 @@ private:
 
         static constexpr auto getCommands()
         {
-            return std::tuple_cat(CommonCommands::getCommands(),
+            return std::tuple_cat(MIRRAModule::Commands<Gateway>::getCommands(),
                                   std::make_tuple(CommandAliasesPair(&Commands::changeWifi, "wifi"), CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
-                                                  CommandAliasesPair(&Commands::rtcReset, "rtcreset"), CommandAliasesPair(&Commands::discovery, "discovery"),
+                                                  CommandAliasesPair(&Commands::rtcReset, "rtcreset"), CommandAliasesPair(&Commands::rtcSet, "rtcset"),
+                                                  CommandAliasesPair(&Commands::discovery, "discovery"),
                                                   CommandAliasesPair(&Commands::printSchedule, "printschedule")));
         }
     };
