@@ -1,5 +1,7 @@
 #include <MIRRAModule.h>
 
+RTC_DATA_ATTR Log::Level level = Log::Level::INFO;
+
 void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
@@ -25,17 +27,18 @@ void MIRRAModule::end()
     lora.sleep();
     LittleFS.end();
     Wire.end();
-    digitalWrite(pins.peripheralPowerPin, LOW);
-    gpio_hold_en(static_cast<gpio_num_t>(pins.peripheralPowerPin));
     Serial.flush();
     Serial.end();
+    digitalWrite(pins.peripheralPowerPin, LOW);
+    gpio_hold_en(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}, commandEntry{pins.bootPin, true}
 {
     Log::log.setSerial(&Serial);
     Log::log.setLogfile(true);
-    Log::log.setLogLevel(LOG_LEVEL);
+    Log::log.setLogLevel(level);
     Serial.println("Logger initialised.");
     Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
 }
@@ -149,4 +152,21 @@ void MIRRAModule::lightSleepUntil(uint32_t untilTime)
     {
         lightSleep(untilTime - cTime);
     }
+}
+
+CommandCode MIRRAModule::Commands::setLogLevel(const char* arg)
+{
+    if (strcmp("DEBUG", arg) == 0)
+        level = Log::Level::DEBUG;
+    else if (strcmp("INFO", arg) == 0)
+        level = Log::Level::INFO;
+    else if (strcmp("ERROR", arg) == 0)
+        level = Log::Level::ERROR;
+    else
+    {
+        Serial.printf("Argument '%s' is not a valid log level.\n", arg);
+        return COMMAND_ERROR;
+    }
+    Log::log.setLogLevel(level);
+    return COMMAND_SUCCESS;
 }

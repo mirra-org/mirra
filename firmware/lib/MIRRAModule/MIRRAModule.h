@@ -9,8 +9,6 @@
 #include <Arduino.h>
 #include <LittleFS.h>
 
-#define LOG_LEVEL Log::INFO
-
 /// @brief A base class for MIRRA modules to inherit from, which implements common functionality.
 class MIRRAModule
 {
@@ -43,7 +41,19 @@ protected:
     MIRRAModule(const MIRRAModule&) = delete;
     MIRRAModule& operator=(const MIRRAModule&) = delete;
     ~MIRRAModule() = default;
-    
+
+    struct Commands : CommonCommands
+    {
+        /// @brief Change the log level.
+        /// @param arg String describing the new log level. ("ERROR", "INFO" or "DEBUG")
+        CommandCode setLogLevel(const char* arg);
+
+        static constexpr auto getCommands()
+        {
+            return std::tuple_cat(CommonCommands::getCommands(), std::make_tuple(CommandAliasesPair(&Commands::setLogLevel, "setlog", "setloglevel")));
+        }
+    };
+
     /// @brief Stores the given sensor data message into the module's flash filesystem. The first type byte of the message is replaced with an 'upload' flag, at
     /// first set to 0.
     /// @param m The message to be stored.
