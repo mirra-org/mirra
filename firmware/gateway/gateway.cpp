@@ -548,22 +548,27 @@ CommandCode Gateway::Commands::changeServer()
 
 CommandCode Gateway::Commands::changeIntervals()
 {
-    Serial.printf("Enter communication interval in seconds (current: '%u') : ", commInterval);
-    auto commIntervalBuffer{CommandParser::readLine()};
-    if (!commIntervalBuffer)
+    uint32_t commIntervalBuffer{commInterval};
+    Serial.printf("Enter communication interval in seconds (current: '%u') : ", commIntervalBuffer);
+    if (!CommandParser::editValue(commIntervalBuffer))
         return COMMAND_ERROR;
-    Serial.printf("Enter sample interval in seconds (current: '%u') : ", sampleInterval);
-    auto sampleIntervalBuffer{CommandParser::readLine()};
-    if (!sampleIntervalBuffer)
+    uint32_t sampleIntervalBuffer{sampleInterval};
+    Serial.printf("Enter sample interval in seconds (current: '%u') : ", sampleIntervalBuffer);
+    if (!CommandParser::editValue(sampleIntervalBuffer))
         return COMMAND_ERROR;
-    Serial.printf("Enter sample rounding in seconds (current: '%u') : ", sampleRounding);
-    auto sampleRoundingBuffer{CommandParser::readLine()};
-    if (!sampleRoundingBuffer)
+    uint32_t sampleRoundingBuffer{sampleRounding};
+    Serial.printf("Enter sample rounding in seconds (current: '%u') : ", sampleRoundingBuffer);
+    if (!CommandParser::editValue(sampleRoundingBuffer))
         return COMMAND_ERROR;
-    Serial.printf("Enter sample offset in seconds (current: '%u') : ", sampleOffset);
-    auto sampleOffsetBuffer{CommandParser::readLine()};
-    if (!sampleOffsetBuffer)
+    uint32_t sampleOffsetBuffer{sampleOffset};
+    Serial.printf("Enter sample offset in seconds (current: '%u') : ", sampleOffsetBuffer);
+    if (!CommandParser::editValue(sampleOffsetBuffer))
         return COMMAND_ERROR;
+
+    commInterval = commIntervalBuffer;
+    sampleInterval = sampleIntervalBuffer;
+    sampleRounding = sampleRoundingBuffer;
+    sampleOffset = sampleOffsetBuffer;
 
     return COMMAND_SUCCESS;
 }
