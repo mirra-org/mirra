@@ -1,5 +1,6 @@
 #include "PCF2129_RTC.h"
 #include "Arduino.h"
+#include <Wire.h>
 
 uint8_t PCF2129_RTC::bcdToDec(uint8_t value) { return (uint8_t)(((value >> 4) * 10) + (value & 0x0F)); }
 

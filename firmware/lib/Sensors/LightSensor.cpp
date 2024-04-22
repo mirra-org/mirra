@@ -1,4 +1,5 @@
 #include "LightSensor.h"
+#include <Arduino.h>
 
 void LightSensor::startMeasurement()
 {

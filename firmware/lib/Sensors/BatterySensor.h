@@ -2,7 +2,6 @@
 #define __BATTERY_SENSOR_H__
 
 #include "Sensor.h"
-#include <Arduino.h>
 
 #define BATTERY_KEY 1
 

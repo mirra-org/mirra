@@ -1,7 +1,6 @@
 #ifndef PCF2129_RTC_H
 #define PCF2129_RTC_H
 
-#include <Wire.h>
 #include <time.h>
 
 #define PCF2129_CONTROL_1_REGISTER 0x00

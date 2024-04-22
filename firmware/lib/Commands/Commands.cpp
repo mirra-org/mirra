@@ -1,5 +1,10 @@
 #include "Commands.h"
 
+#include <Arduino.h>
+#include <LittleFS.h>
+
+CommandEntry::CommandEntry(uint8_t checkPin, bool invert) : commandPhaseFlag{invert != static_cast<bool>(digitalRead(checkPin))} {}
+
 std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::readLine()
 {
     uint64_t timeout;

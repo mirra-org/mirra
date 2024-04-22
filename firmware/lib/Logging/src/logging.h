@@ -1,7 +1,6 @@
 #ifndef __LOGGING_H__
 #define __LOGGING_H__
 
-#include <FS.h>
 #include <HardwareSerial.h>
 #include <LittleFS.h>
 #include <type_traits>

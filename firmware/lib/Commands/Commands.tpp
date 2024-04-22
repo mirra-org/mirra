@@ -2,6 +2,9 @@
 #define __COMMANDS_T__
 #include "Commands.h"
 
+#include <Arduino.h>
+#include <charconv>
+
 template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void> CommandEntry::prompt(C&& commands)
 {
     if (commandPhaseFlag)
@@ -28,7 +31,8 @@ template <class N> typename std::enable_if_t<std::is_arithmetic_v<N>, std::optio
     return parseNum<N>(line->data());
 }
 
-template <class T> typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, char*>, bool> CommandParser::editValue(T& value, bool skipWhenEmpty)
+template <class T>
+typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<std::decay_t<T>, char*>, bool> CommandParser::editValue(T& value, bool skipWhenEmpty)
 {
     while (true)
     {
@@ -37,9 +41,16 @@ template <class T> typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_
             return false;
         if (skipWhenEmpty && strlen(buffer->data()) == 0)
             return true;
-        if constexpr (std::is_same_v<T, char*>)
+        if constexpr (std::is_same_v<std::decay_t<T>, char*>)
         {
-            strncpy(value, buffer->data(), strlen(value));
+            if constexpr (std::is_array_v<T>)
+            {
+                strncpy(value, buffer->data(), std::extent_v<T>);
+            }
+            else
+            {
+                strncpy(value, buffer->data(), strlen(value));
+            }
             return true;
         }
         else

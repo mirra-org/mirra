@@ -1,3 +1,4 @@
+#include <Arduino.h>
 #include <BatterySensor.h>
 
 void BatterySensor::setup()

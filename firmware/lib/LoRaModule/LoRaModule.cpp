@@ -1,5 +1,8 @@
 #include "LoRaModule.h"
 
+#include <Arduino.h>
+#include <logging.h>
+
 LoRaModule::LoRaModule(const uint8_t csPin, const uint8_t rstPin, const uint8_t DIO0Pin, const uint8_t rxPin, const uint8_t txPin)
     : module{csPin, DIO0Pin, rstPin}, DIO0Pin{DIO0Pin}, SX1272(&module)
 {

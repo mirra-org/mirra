@@ -1,12 +1,9 @@
 #ifndef __COMMANDS_H__
 #define __COMMANDS_H__
 
-#include <Arduino.h>
-#include <LittleFS.h>
-
 #include <array>
-#include <charconv>
 #include <optional>
+#include <tuple>
 
 #define UART_PHASE_TIMEOUT (1 * 60) // s, length of UART inactivity required to automatically exit command phase
 
@@ -91,7 +88,7 @@ public:
     /// @brief Creates the commands entry subsystem and saturates its commandPhaseFlag.
     /// @param checkPin Pin to check for setting the commandPhaseFlag.
     /// @param invert Whether to invert the value of the read pin.
-    CommandEntry(uint8_t checkPin, bool invert = false) : commandPhaseFlag{invert != static_cast<bool>(digitalRead(checkPin))} {}
+    CommandEntry(uint8_t checkPin, bool invert = false);
     /// @brief Checks the commandPhaseFlag and enters the command phase if it is set.
     /// @tparam C Commands set to be used for this command phase.
     template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void> prompt(C&& commands);
@@ -121,7 +118,7 @@ public:
     /// @param value Value to edit.
     /// @param skipWhenEmpty Whether to skip the editing of the value when the user enters an empty buffer (i.e. just presses Enter).
     template <class T>
-    static typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<T, char*>, bool> editValue(T& value, bool skipWhenEmpty = true);
+    static typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<std::decay_t<T>, char*>, bool> editValue(T& value, bool skipWhenEmpty = true);
     /// @brief Initialises the command loop, exiting when the appropriate command code is returned by processCommands.
     /// @tparam C Commands set to be used for this command phase.
     template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void> start(C&& commands);

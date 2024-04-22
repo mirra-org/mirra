@@ -2,7 +2,6 @@
 #define SENSOR_H
 
 #include <stdint.h>
-#include <time.h>
 
 struct SensorValue
 {

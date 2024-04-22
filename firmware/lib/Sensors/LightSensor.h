@@ -2,7 +2,6 @@
 #define __LIGHT_SENSOR_H__
 
 #include "Sensor.h"
-#include <Arduino.h>
 #include <AsyncAPDS9306.h>
 
 #define LIGHT_KEY 22

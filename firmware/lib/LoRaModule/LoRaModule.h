@@ -1,12 +1,8 @@
 #ifndef __RADIO_H__
 #define __RADIO_H__
 
-#include <Arduino.h>
 #include <CommunicationCommon.h>
-#include <PCF2129_RTC.h>
 #include <RadioLib.h>
-#include <logging.h>
-
 #include <optional>
 
 /******************************

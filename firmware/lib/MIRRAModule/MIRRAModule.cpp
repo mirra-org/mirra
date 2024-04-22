@@ -1,5 +1,10 @@
 #include <MIRRAModule.h>
 
+#include "logging.h"
+#include <Arduino.h>
+#include <LittleFS.h>
+#include <Wire.h>
+
 RTC_DATA_ATTR Log::Level level = Log::Level::INFO;
 
 void MIRRAModule::prepare(const MIRRAPins& pins)

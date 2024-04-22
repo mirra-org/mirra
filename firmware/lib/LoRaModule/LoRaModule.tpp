@@ -1,9 +1,12 @@
 #ifndef __RADIO_T__
 #define __RADIO_T__
 
+#include <Arduino.h>
 #include <LoRaModule.h>
+#include <RadioLib.h>
 #include <algorithm>
 #include <functional>
+#include <logging.h>
 
 template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 {
@@ -120,8 +123,7 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
     return std::nullopt;
 }
 
-template <MessageType T>
-std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t wakePin)
+template <MessageType T> std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t wakePin)
 {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // When the LoRa module get's a message it will generate an interrupt on DIO0.
@@ -130,48 +132,48 @@ std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t 
     esp_sleep_enable_timer_wakeup((timeoutMs) * 1000);
     // Also use the wake pin to force wake-up
     esp_sleep_enable_ext1_wakeup(0x1 << wakePin, ESP_EXT1_WAKEUP_ALL_LOW);
-        Log::debug("Starting receive ...");
-        int state{this->startReceive()};
+    Log::debug("Starting receive ...");
+    int state{this->startReceive()};
 
-        if (state != RADIOLIB_ERR_NONE)
+    if (state != RADIOLIB_ERR_NONE)
+    {
+        Log::error("Receive failed, code: ", state);
+        return std::nullopt;
+    }
+
+    esp_light_sleep_start();
+
+    esp_sleep_wakeup_cause_t wakeupCause{esp_sleep_get_wakeup_cause()};
+
+    if (wakeupCause == ESP_SLEEP_WAKEUP_EXT0)
+    {
+        uint8_t buffer[Message<T>::maxLength]{0};
+        state = this->readData(buffer, std::min(this->getPacketLength(), Message<T>::maxLength));
+
+        if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
-            Log::error("Receive failed, code: ", state);
+            Log::error("Reading received data (", this->getPacketLength(false),
+                       " bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...");
             return std::nullopt;
         }
-
-        esp_light_sleep_start();
-
-        esp_sleep_wakeup_cause_t wakeupCause{esp_sleep_get_wakeup_cause()};
-
-        if (wakeupCause == ESP_SLEEP_WAKEUP_EXT0)
+        if (state != RADIOLIB_ERR_NONE)
         {
-            uint8_t buffer[Message<T>::maxLength]{0};
-            state = this->readData(buffer, std::min(this->getPacketLength(), Message<T>::maxLength));
-
-            if (state == RADIOLIB_ERR_CRC_MISMATCH)
-            {
-                Log::error("Reading received data (", this->getPacketLength(false),
-                           " bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...");
-                return std::nullopt;
-            }
-            if (state != RADIOLIB_ERR_NONE)
-            {
-                Log::error("Reading received data (", this->getPacketLength(false), " bytes) failed, code: ", state);
-                return std::nullopt;
-            }
-            Log::debug("Reading received data (", this->getPacketLength(false), " bytes): success");
-            Message<T>& received{Message<T>::fromData(buffer)};
-            Log::debug("Message Type: ", received.getType());
-            Log::debug("Source: ", received.getSource().toString());
-            Log::debug("Dest: ", received.getDest().toString());
-            if (!received.isValid())
-            {
-                Log::debug("Message of type ", received.getType(), " discarded because message of type ", T, " is desired.");
-                return std::nullopt;
-            }
-            return received;
+            Log::error("Reading received data (", this->getPacketLength(false), " bytes) failed, code: ", state);
+            return std::nullopt;
         }
-        return std::nullopt;
+        Log::debug("Reading received data (", this->getPacketLength(false), " bytes): success");
+        Message<T>& received{Message<T>::fromData(buffer)};
+        Log::debug("Message Type: ", received.getType());
+        Log::debug("Source: ", received.getSource().toString());
+        Log::debug("Dest: ", received.getDest().toString());
+        if (!received.isValid())
+        {
+            Log::debug("Message of type ", received.getType(), " discarded because message of type ", T, " is desired.");
+            return std::nullopt;
+        }
+        return received;
+    }
+    return std::nullopt;
 }
 
 #endif
