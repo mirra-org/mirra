@@ -3,7 +3,6 @@
 
 #include "MIRRAModule.h"
 #include "PubSubClient.h"
-#include "WiFi.h"
 #include "WiFiClientSecure.h"
 #include "config.h"
 #include <vector>
@@ -86,7 +85,7 @@ private:
 
         static constexpr auto getCommands()
         {
-            return std::tuple_cat(MIRRAModule::Commands<Gateway>::getCommands(),
+            return std::tuple_cat(MIRRAModule::Commands::getCommands(),
                                   std::make_tuple(CommandAliasesPair(&Commands::changeWifi, "wifi"), CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
                                                   CommandAliasesPair(&Commands::rtcReset, "rtcreset"), CommandAliasesPair(&Commands::rtcSet, "rtcset"),
                                                   CommandAliasesPair(&Commands::discovery, "discovery"),
@@ -104,7 +103,6 @@ private:
             wifi.setPreSharedKey(identity, psk);
             setBufferSize(512);
         };
-        MQTTClient();
 
         /// @brief Attempts to connect to the designated MQTT server.
         /// @param clientId The MAC address to use as a client ID while connecting.

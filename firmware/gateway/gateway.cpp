@@ -1,6 +1,6 @@
 #include "gateway.h"
 #include <cstring>
-#include <sntp.h>
+#include <esp_sntp.h>
 
 void Node::timeConfig(Message<TIME_CONFIG>& m)
 {
@@ -306,8 +306,6 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
 
 void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
 
-Gateway::MQTTClient::MQTTClient() : MQTTClient(mqttServer, mqttPort, mqttIdentity, mqttPsk){};
-
 bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 {
     for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
@@ -332,59 +330,61 @@ void Gateway::uploadPeriod()
 {
     Log::info("Commencing upload to MQTT server...");
     wifiConnect();
-    if (WiFi.status() != WL_CONNECTED)
-    {
-        Log::error("WiFi not connected. Aborting upload to MQTT server...");
-        return;
-    }
-    MQTTClient mqtt{mqttServer, mqttPort, mqttIdentity, mqttPsk};
-    size_t nErrors{0}; // amount of errors while uploading
-    size_t messagesPublished{0};
-    bool upload{true};
     File data{LittleFS.open(DATA_FP, "r+")};
-    while (data.available())
+    if (WiFi.status() == WL_CONNECTED)
     {
-        uint8_t size = data.read();
-        uint8_t buffer[size];
-        data.read(buffer, size);
-        if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
+        MQTTClient mqtt{mqttServer, mqttPort, mqttIdentity, mqttPsk};
+        size_t nErrors{0}; // amount of errors while uploading
+        size_t messagesPublished{0};
+        bool upload{true};
+        while (data.available())
         {
-            auto& message{Message<SENSOR_DATA>::fromData(buffer)};
-            char topic[topicSize];
-            createTopic(topic, message.getSource());
-
-            if (mqtt.clientConnect(lora.getMACAddress()))
+            uint8_t size = data.read();
+            uint8_t buffer[size];
+            data.read(buffer, size);
+            if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
             {
-                if (mqtt.publish(topic, &buffer[message.headerLength], message.getLength() - message.headerLength))
+                auto& message{Message<SENSOR_DATA>::fromData(buffer)};
+                char topic[topicSize];
+                createTopic(topic, message.getSource());
+
+                if (mqtt.clientConnect(lora.getMACAddress()))
                 {
-                    Log::debug("MQTT message succesfully published.");
-                    // mark uploaded
-                    size_t curPos{data.position()};
-                    data.seek(curPos - size);
-                    data.write(1);
-                    data.seek(curPos);
-                    messagesPublished++;
+                    if (mqtt.publish(topic, &buffer[message.headerLength], message.getLength() - message.headerLength))
+                    {
+                        Log::debug("MQTT message succesfully published.");
+                        // mark uploaded
+                        size_t curPos{data.position()};
+                        data.seek(curPos - size);
+                        data.write(1);
+                        data.seek(curPos);
+                        messagesPublished++;
+                    }
+                    else
+                    {
+                        Log::error("Error while publishing to MQTT server. State: ", mqtt.state());
+                        nErrors++;
+                    }
                 }
                 else
                 {
-                    Log::error("Error while publishing to MQTT server. State: ", mqtt.state());
-                    nErrors++;
+                    Log::error("Error while connecting to MQTT server. Aborting upload. State: ", mqtt.state());
+                    upload = false;
                 }
             }
-            else
+            if (nErrors >= MAX_MQTT_ERRORS)
             {
-                Log::error("Error while connecting to MQTT server. Aborting upload. State: ", mqtt.state());
+                Log::error("Too many errors while publishing to MQTT server. Aborting upload.");
                 upload = false;
             }
         }
-        if (nErrors >= MAX_MQTT_ERRORS)
-        {
-            Log::error("Too many errors while publishing to MQTT server. Aborting upload.");
-            upload = false;
-        }
+        mqtt.disconnect();
+        Log::info("MQTT upload finished with ", messagesPublished, " messages sent.");
     }
-    mqtt.disconnect();
-    Log::info("MQTT upload finished with ", messagesPublished, " messages sent.");
+    else
+    {
+        Log::error("WiFi not connected. Aborting upload to MQTT server...");
+    }
     commPeriods = 0;
     data.seek(0);
     pruneSensorData(std::move(data), MAX_SENSORDATA_FILESIZE);
@@ -417,21 +417,24 @@ void Gateway::parseNodeUpdate(char* update)
 
 CommandCode Gateway::Commands::changeWifi()
 {
-    Serial.printf("Enter WiFi SSID (current: '%s') :\n", ssid);
-    auto ssidBuffer{CommandParser::readLine()};
-    if (!ssidBuffer)
-        return COMMAND_ERROR;
-    Serial.println("Enter WiFi password:");
-    auto passBuffer{CommandParser::readLine()};
-    if (!passBuffer)
+    char ssidBuffer[sizeof(ssid)];
+    strncpy(ssidBuffer, ssid, sizeof(ssid));
+    Serial.printf("Enter WiFi SSID (current: '%s') :\n", ssidBuffer);
+    if (!CommandParser::editValue(ssidBuffer))
         return COMMAND_ERROR;
 
-    parent->wifiConnect(ssidBuffer->data(), passBuffer->data());
+    char passBuffer[sizeof(pass)];
+    strncpy(passBuffer, ssid, sizeof(pass));
+    Serial.println("Enter WiFi password:");
+    if (!CommandParser::editValue(passBuffer))
+        return COMMAND_ERROR;
+
+    parent->wifiConnect(ssidBuffer, passBuffer);
     if (WiFi.status() == WL_CONNECTED)
     {
         WiFi.disconnect();
-        strncpy(ssid, ssidBuffer->data(), sizeof(ssid));
-        strncpy(pass, passBuffer->data(), sizeof(pass));
+        strncpy(ssid, ssidBuffer, sizeof(ssid));
+        strncpy(pass, passBuffer, sizeof(pass));
         Serial.println("WiFi connected! This WiFi network has been set as the default.");
     }
     else
@@ -502,30 +505,36 @@ CommandCode Gateway::Commands::rtcSet()
 
 CommandCode Gateway::Commands::changeServer()
 {
-    Serial.printf("Enter server URL or IP address (current: '%s') :\n", mqttServer);
-    auto serverBuffer{CommandParser::readLine()};
-    if (!serverBuffer)
-        return COMMAND_ERROR;
-    Serial.printf("Enter the server's MQTT port (current: '%u') :\n", mqttPort);
-    uint16_t port{mqttPort};
-    if (!CommandParser::editValue(port))
-        return COMMAND_ERROR;
-    Serial.printf("Enter the gateway's identity to authenticate with the server (current: '%s') :\n", mqttIdentity);
-    auto identityBuffer{CommandParser::readLine()};
-    if (!identityBuffer)
-        return COMMAND_ERROR;
-    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n", mqttPsk);
-    auto pskBuffer{CommandParser::readLine()};
-    if (!pskBuffer)
+    char serverBuffer[sizeof(mqttServer)];
+    strncpy(serverBuffer, mqttServer, sizeof(mqttServer));
+    Serial.printf("Enter server URL or IP address (current: '%s') :\n", serverBuffer);
+    if (!CommandParser::editValue(serverBuffer))
         return COMMAND_ERROR;
 
-    MQTTClient client{serverBuffer->data(), port, identityBuffer->data(), pskBuffer->data()};
+    uint16_t portBuffer{mqttPort};
+    Serial.printf("Enter the server's MQTT port (current: '%u') :\n", portBuffer);
+    if (!CommandParser::editValue(portBuffer))
+        return COMMAND_ERROR;
+
+    char identityBuffer[sizeof(mqttIdentity)];
+    strncpy(identityBuffer, mqttIdentity, sizeof(mqttIdentity));
+    Serial.printf("Enter the gateway's identity to authenticate with the server (current: '%s') :\n", identityBuffer);
+    if (!CommandParser::editValue(identityBuffer))
+        return COMMAND_ERROR;
+
+    char pskBuffer[sizeof(mqttPsk)];
+    strncpy(pskBuffer, mqttPsk, sizeof(mqttPsk));
+    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n", pskBuffer);
+    if (!CommandParser::editValue(pskBuffer))
+        return COMMAND_ERROR;
+
+    MQTTClient client{serverBuffer, portBuffer, identityBuffer, pskBuffer};
     if (client.clientConnect(parent->lora.getMACAddress()))
     {
-        strncpy(mqttServer, serverBuffer->data(), sizeof(mqttServer));
-        mqttPort = port;
-        strncpy(mqttIdentity, identityBuffer->data(), sizeof(mqttIdentity));
-        strncpy(mqttPsk, pskBuffer->data(), sizeof(mqttPsk));
+        strncpy(mqttServer, serverBuffer, sizeof(mqttServer));
+        mqttPort = portBuffer;
+        strncpy(mqttIdentity, identityBuffer, sizeof(mqttIdentity));
+        strncpy(mqttPsk, pskBuffer, sizeof(mqttPsk));
         Serial.println("Connection to provided server successful. Configuration has been changed.");
         Serial.printf("mqttServer: %s\n", mqttServer);
         Serial.printf("mqttPort: %u\n", mqttPort);
