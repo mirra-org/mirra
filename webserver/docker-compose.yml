@@ -6,6 +6,8 @@ services:
     restart: unless-stopped
     cap_add:
       - NET_ADMIN
+    ports:
+      - "443:443"
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - ./caddy/data:/data
@@ -39,7 +41,7 @@ services:
       - "8883:8883"
       - "9001:9001"
     volumes:
-      - ./mqqt_broker/mosquitto.conf:etc/mosquitto/mosquitto.conf
+      - ./mqqt_broker/mosquitto.conf:/etc/mosquitto/mosquitto.conf
 
   mqtt_parser:
     container_name: "mqtt_parser"
