@@ -1,16 +1,19 @@
 version: '3'
 services:
-  # Start up SQL and use initial data backup -DONE
-  #data:
-  #  build: /users/opieters/webserver/management_interface/docker/data/
+  caddy:
+    container_name: "caddy"
+    image: caddy:latest
+    restart: unless-stopped
+    cap_add:
+      - NET_ADMIN
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/data:/data
+      - ./caddy/config:/config
+
   db:
-    image: mysql:5.7.25
     container_name: "gems_mysql"
-    networks:
-      - internet # this is for dev purposes only (MySQL not exposed through firewall, but can be accessed through SSH tunnel)
-      - no-internet
-    ports:
-      - "3306:3306"
+    image: mysql:5.7.25
     environment:
       MYSQL_ROOT_PASSWORD: toon-me-eens-een-sterk-wachtwoord
       MYSQL_DATABASE: mms
@@ -23,64 +26,32 @@ services:
       #- db_data:/users/opieters/webserver/management_interface/docker/data
       #- /users/opieters/webserver/management_interface/docker/data:/docker-entrypoint-initdb.d
 
-  # Start up MQTT
-  mqtt_broker:
-    image: eclipse-mosquitto:1.6.3
-    container_name: "mqtt_broker"
-    ports:
-      - "1883:1883"
-      - "9001:9001"
-    networks:
-      - internet
-      - no-internet
-  web:
-    container_name: "web"
-    build: 
-      context: ./management_interface/
-      #dockerfile: Dockerfile
-    ports:
-      - "80:80"
+  mirra_web:
+    container_name: "mirra_web"
+    build: ./mirra_web/
     depends_on:
       - db
-    networks:
-      - internet
-      - no-internet
+
+  mqtt_broker:
+    container_name: "mqtt_broker"
+    image: eclipse-mosquitto
+    ports:
+      - "8883:8883"
+      - "9001:9001"
+    volumes:
+      - ./mqqt_broker/mosquitto.conf:/mosquitto/config/mosquitto.conf
+
   mqtt_parser:
     container_name: "mqtt_parser"
     build: ./mqtt_parser/
-    #ports:
-    #  - "3306:3306"
-    #  - "1883:1883"
     depends_on: 
       - db
       - mqtt_broker
-    networks:
-      - internet
-      - no-internet
-  # Start up Grafana -DONE
-  grafana:
-      restart: always
-      image: grafana/grafana:9.5.1
-      ports:
-        - "3000:3000"
-      container_name: "gems_grafana"
-      volumes:
-        - ./grafana/data:/var/lib/grafana
-        - ./grafana/grafana.ini:/etc/grafana/grafana.ini
-      depends_on:
-        - db
-      networks:
-        - internet
-        - no-internet
-      user: "1000"
 
 volumes:
   db_data: {}
 
 networks:
-  no-internet:
-    driver: bridge
-    internal: true
-  internet:
-    driver: bridge
+  default:
+    name: proxy
 
