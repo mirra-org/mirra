@@ -45,6 +45,7 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::log.setLogfile(true);
     Log::log.setLogLevel(level);
     Serial.println("Logger initialised.");
+    Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
     Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
 }
 
