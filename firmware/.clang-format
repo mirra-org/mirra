@@ -7,6 +7,6 @@ AllowShortIfStatementsOnASingleLine: false
 IndentCaseLabels: false
 ColumnLimit: 160
 AccessModifierOffset: -4
-NamespaceIndentation: All
+NamespaceIndentation: Inner
 FixNamespaceComments: false
 PointerAlignment: Left
