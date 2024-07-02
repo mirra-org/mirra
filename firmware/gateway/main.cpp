@@ -3,6 +3,14 @@
 
 void setup(void)
 {
+    esp_sleep_enable_timer_wakeup(100 * 1000);
+    while (true)
+    {
+        Serial.printf("%i | %i", esp_timer_get_time() ,esp_timer_get_next_alarm_for_wake_up())
+        delay(10)
+    }
+
+
     constexpr MIRRAModule::MIRRAPins pins = {.bootPin = BOOT_PIN,
                                              .peripheralPowerPin = PERIPHERAL_POWER_PIN,
                                              .sdaPin = SDA_PIN,

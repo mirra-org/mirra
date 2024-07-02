@@ -27,7 +27,7 @@ private:
     /// @brief Whether logging to file is enabled.
     bool logfileEnabled{false};
     /// @brief Time struct of the currently loaded logging file.
-    tm logfileTime{0};
+    tm logfileTime{};
     /// @brief Currently loaded logging file. Should be opened in append mode.
     File logfile{};
     /// @brief Days to keep a logging file in the filesystem.
@@ -148,15 +148,15 @@ template <class T> constexpr std::string_view Log::typeToFormatSpecifier()
     }
 }
 
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*>() { return "%s"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned int>() { return "%u"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<long signed int>() { return "%i"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed char>() { return "%i"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned char>() { return "%u"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; };
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char>() { return "%c"; };
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*>() { return "%s"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned int>() { return "%u"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<long signed int>() { return "%i"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed char>() { return "%i"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned char>() { return "%u"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; }
+template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char>() { return "%c"; }
 
 template <class... Ts> constexpr auto Log::createFormatString()
 {
