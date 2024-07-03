@@ -18,7 +18,7 @@ public:
     ESPCamUART(HardwareSerial* camSerial, gpio_num_t pin) : camSerial{camSerial}, pin{pin} {};
     void startMeasurement();
     SensorValue getMeasurement();
-    uint8_t getID() const { return CAM_KEY; };
+    uint32_t getTypeTag() const { return CAM_KEY; };
 
     void updateNextSampleTime(uint32_t sampleInterval);
 };

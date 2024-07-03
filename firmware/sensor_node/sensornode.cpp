@@ -122,8 +122,9 @@ void SensorNode::initSensors()
     addSensor(std::make_unique<RandomSensor>(rtc.getSysTime()));
     addSensor(std::make_unique<SoilTemperatureSensor>(SOILTEMP_PIN, SOILTEMP_BUS_INDEX));
     addSensor(std::make_unique<LightSensor>());
-    addSensor(std::make_unique<TempSHTSensor>());
-    addSensor(std::make_unique<HumiSHTSensor>(*reinterpret_cast<TempSHTSensor*>(sensors[nSensors - 1].get())));
+    auto shtSensor = SharedSHTSensor::make();
+    addSensor(std::make_unique<TempSHTSensor>(shtSensor));
+    addSensor(std::make_unique<HumiSHTSensor>(shtSensor));
     addSensor(std::make_unique<BatterySensor>(BATT_PIN, BATT_EN_PIN));
 }
 
@@ -145,13 +146,13 @@ Message<SENSOR_DATA> SensorNode::sampleAll()
     Log::info("Sampling all sensors...");
     for (size_t i{0}; i < nSensors; i++)
     {
-        Serial.printf("Starting measurement for %u\n", sensors[i]->getID());
+        Serial.printf("Starting measurement for %u\n", sensors[i]->getTypeTag());
         sensors[i]->startMeasurement();
     }
     std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
     for (size_t i{0}; i < nSensors; i++)
     {
-        Serial.printf("Getting measurement for %u\n", sensors[i]->getID());
+        Serial.printf("Getting measurement for %u\n", sensors[i]->getTypeTag());
         values[i] = sensors[i]->getMeasurement();
     }
     return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, 0, static_cast<uint8_t>(nSensors), values);
@@ -324,7 +325,7 @@ CommandCode SensorNode::Commands::printSample()
     Serial.println("TAG\tVALUE");
     for (size_t i{0}, nValues{message.getNValues()}; i < nValues; i++)
     {
-        Serial.printf("%u\t%f\n", values[i].tag, values[i].value);
+        Serial.printf("%u\t%f\n", values[i].typeTag, values[i].value);
     }
     parent->clearSensors();
     return COMMAND_SUCCESS;
@@ -342,7 +343,7 @@ CommandCode SensorNode::Commands::printSchedule()
         time_t nextSensorSampleTime{static_cast<time_t>(parent->sensors[i]->getNextSampleTime())};
         gmtime_r(&nextSensorSampleTime, &time);
         strftime(buffer, timeLength, "%F %T", &time);
-        Serial.printf("%u\t%s\n", parent->sensors[i]->getID(), buffer);
+        Serial.printf("%u\t%s\n", parent->sensors[i]->getTypeTag(), buffer);
     }
     parent->clearSensors();
     return COMMAND_SUCCESS;

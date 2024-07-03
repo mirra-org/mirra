@@ -11,5 +11,5 @@ SensorValue LightSensor::getMeasurement()
 {
     while (!baseSensor.isMeasurementReady())
         ;
-    return SensorValue(getID(), static_cast<float>(baseSensor.getLuminosityMeasurement().raw));
+    return SensorValue(getTypeTag(), getInstanceTag(), static_cast<float>(baseSensor.getLuminosityMeasurement().raw));
 }

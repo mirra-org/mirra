@@ -9,7 +9,8 @@ void BatterySensor::setup()
 void BatterySensor::startMeasurement() { digitalWrite(enablePin, HIGH); }
 SensorValue BatterySensor::getMeasurement()
 {
-    SensorValue value{getID(), 2 * static_cast<float>(analogReadMilliVolts(pin)) / 1000}; // times two because of voltage divider (see schematic)
+    SensorValue value{getTypeTag(), getInstanceTag(),
+                      2 * static_cast<float>(analogReadMilliVolts(pin)) / 1000}; // times two because of voltage divider (see schematic)
     digitalWrite(enablePin, LOW);
     return value;
 }

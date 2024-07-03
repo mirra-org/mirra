@@ -9,5 +9,5 @@ SensorValue SoilTemperatureSensor::getMeasurement()
     DeviceAddress addr;
     dallas.getAddress(addr, this->busIndex);
     dallas.requestTemperaturesByAddress(addr);
-    return SensorValue(getID(), dallas.getTempC(addr));
+    return SensorValue(getTypeTag(), getInstanceTag(), dallas.getTempC(addr));
 }

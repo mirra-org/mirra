@@ -15,6 +15,6 @@ public:
     LightSensor() = default;
     void startMeasurement();
     SensorValue getMeasurement();
-    uint8_t getID() const { return LIGHT_KEY; };
+    uint32_t getTypeTag() const { return LIGHT_KEY; };
 };
 #endif

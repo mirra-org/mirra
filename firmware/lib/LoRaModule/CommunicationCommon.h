@@ -99,8 +99,6 @@ public:
     static constexpr size_t maxLength{256};
 } __attribute__((packed));
 
-constexpr size_t test{sizeof(MessageHeader)};
-
 /// @brief Final message class.
 /// @tparam T The message type of the message.
 template <MessageType T> class Message : public MessageHeader

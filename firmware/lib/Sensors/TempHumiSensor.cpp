@@ -1,7 +1,7 @@
 #include "Wire.h"
 #include <TempHumiSensor.h>
 
-void TempSHTSensor::setup(void)
+void SharedSHTSensor::setup(void)
 {
     Serial.println("SHT setup.");
     if (baseSensor.init())
@@ -9,8 +9,8 @@ void TempSHTSensor::setup(void)
         Serial.println("SHT init OK.");
     }
 }
-void TempSHTSensor::startMeasurement() { baseSensor.readSample(); }
+void SharedSHTSensor::startMeasurement() { baseSensor.readSample(); }
 
-SensorValue TempSHTSensor::getMeasurement() { return SensorValue(getID(), baseSensor.getTemperature()); }
+SensorValue TempSHTSensor::getMeasurement() { return SensorValue(getTypeTag(), getInstanceTag(), getSharedSensor().getTemperature()); }
 
-SensorValue HumiSHTSensor::getMeasurement() { return SensorValue(getID(), baseSensor.getHumidity()); }
+SensorValue HumiSHTSensor::getMeasurement() { return SensorValue(getTypeTag(), getInstanceTag(), getSharedSensor().getHumidity()); }

@@ -45,7 +45,7 @@ SensorValue ESPCamUART::getMeasurement()
     digitalWrite(pin, LOW);
     gpio_hold_en(pin);
 
-    return SensorValue(getID(), 0);
+    return SensorValue(getTypeTag(), getInstanceTag(), 0);
 }
 
 void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
