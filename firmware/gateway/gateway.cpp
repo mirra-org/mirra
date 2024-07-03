@@ -447,9 +447,9 @@ CommandCode Gateway::Commands::changeWifi()
 CommandCode Gateway::Commands::rtcUpdateTime()
 {
     parent->wifiConnect();
-    Log::info("Fetching NTP time.");
     if (WiFi.status() == WL_CONNECTED)
     {
+        Log::info("Fetching NTP time.");
         sntp_setoperatingmode(SNTP_OPMODE_POLL);
         sntp_setservername(0, NTP_URL);
         sntp_set_sync_interval(15000);
