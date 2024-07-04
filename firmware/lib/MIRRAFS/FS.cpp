@@ -169,3 +169,50 @@ void NVS::init()
 }
 
 File::File(const char* name) : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)} {}
+
+size_t File::toSectorAddress(size_t address) { return (address / sectorSize) * sectorSize; }
+
+bool File::inSector(size_t address) { return sectorAddress <= address && address < sectorAddress + sectorSize; }
+
+void File::readSector(size_t sectorAddress)
+{
+    flush();
+    esp_err_t err = esp_partition_read(part, sectorAddress, sectorBuffer.get(), sectorSize);
+    if (err != ESP_OK)
+        ; // log error
+    this->sectorAddress = sectorAddress;
+}
+
+void File::writeSector()
+{
+    esp_err_t err = esp_partition_erase_range(part, sectorAddress, sectorSize);
+    if (err != ESP_OK)
+        ; // log error
+    esp_partition_write(part, sectorAddress, sectorBuffer.get(), sectorSize);
+    if (err != ESP_OK)
+        ; // log error
+}
+
+void File::read(size_t address, void* buffer, size_t size) {}
+
+void File::write(size_t address, const void* buffer, size_t size)
+{
+    size_t written = 0;
+    while (size > 0)
+    {
+        address += written;
+        if (!inSector(address))
+            readSector(toSectorAddress(address));
+        size_t address - sectorAddress;
+
+        std::memcpy(&sectorBuffer.get()[address - sectorAddress], &buffer[written], sectorSize -) written +=
+    }
+}
+
+void File::flush()
+{
+    if (sectorDirty)
+    {
+        writeSector();
+    }
+}

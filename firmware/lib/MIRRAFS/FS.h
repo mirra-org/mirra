@@ -3,6 +3,7 @@
 
 #include <cstring>
 #include <esp_partition.h>
+#include <memory>
 #include <nvs.h>
 #include <nvs_flash.h>
 #include <utility>
@@ -108,15 +109,25 @@ namespace mirra::fs
     private:
         const esp_partition_t* part;
 
-    protected:
-        size_t head;
-        size_t tail;
+        static constexpr size_t sectorSize = 4096;
+        std::unique_ptr<uint8_t[sectorSize]> sectorBuffer{};
+        size_t sectorAddress;
+        bool sectorDirty;
 
-        void pop();
+        size_t toSectorAddress(size_t address);
+        bool inSector(size_t address);
+        void readSector(size_t sectorAddress);
+        void writeSector();
 
     public:
         File(const char* name);
-        void push(void* buffer, size_t size);
+
+        void push(const void* buffer, size_t size);
+        void write(size_t address, const void* buffer, size_t size);
+        void read(size_t address, void* buffer, size_t size);
+        template <class T> void read(size_t address);
+
+        void flush();
 
         ~File();
     };
