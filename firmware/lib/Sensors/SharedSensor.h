@@ -11,41 +11,37 @@ protected:
 
 public:
     SharingSensor(SharedSensorPtr sharedSensor) : sharedSensor{sharedSensor} {}
-    void setup() final { sharedSensor.get()->setup(); }
-    void startMeasurement() final { sharedSensor.get()->startMeasurement(); }
+    void setup() final { sharedSensor.get()->sharedSetup(); }
+    void startMeasurement() final { sharedSensor.get()->sharedStartMeasurement(); }
 };
 
 template <class T, class D> class SharedSensor
 {
-public:
-    using BaseSensor = T;
-    BaseSensor baseSensor;
-
-private:
     bool setupDone{false};
     bool measurementStarted{false};
 
-protected:
-    SharedSensor(BaseSensor&& baseSensor) : baseSensor{std::move(baseSensor)} {}
-
-private:
-    void setup()
+    void sharedSetup()
     {
         if (!setupDone)
-            D::setup();
+            static_cast<D*>(this)->setup();
         setupDone = true;
     }
-    void startMeasurement()
+    void sharedStartMeasurement()
     {
         if (!measurementStarted)
-            D::startMeasurement();
+            static_cast<D*>(this)->startMeasurement();
         measurementStarted = true;
     }
+
+protected:
+    using BaseSensor = T;
+    SharedSensor(BaseSensor&& baseSensor) : baseSensor{std::move(baseSensor)} {}
+    BaseSensor baseSensor;
 
 public:
     template <class... Args> static std::shared_ptr<D> make(Args&&... args) { return std::make_shared<D>(std::forward<Args>(args)...); }
 
-    friend class SharingSensor<SharedSensor>;
+    friend class SharingSensor<D>;
 };
 
 #endif
