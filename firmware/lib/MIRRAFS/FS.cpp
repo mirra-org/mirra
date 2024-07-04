@@ -8,6 +8,7 @@ NVS::NVS(const char* name)
     {
         // log error
     };
+    std::strncpy(this->name, name, NVS_KEY_NAME_MAX_SIZE);
 }
 
 NVS::~NVS()
@@ -167,4 +168,4 @@ void NVS::init()
     }
 }
 
-File::File(const char* name) { const esp_partition_t* part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)}; }
+File::File(const char* name) : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)} {}

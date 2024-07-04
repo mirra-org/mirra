@@ -1,11 +1,11 @@
 #ifndef __MIRRA_FS_H__
 #define __MIRRA_FS_H__
 
+#include <cstring>
 #include <esp_partition.h>
 #include <nvs.h>
 #include <nvs_flash.h>
-#include <string_view>
-#include <type_traits>
+#include <utility>
 
 namespace mirra::fs
 {
@@ -13,6 +13,7 @@ namespace mirra::fs
     {
     private:
         nvs_handle_t handle;
+        char name[NVS_KEY_NAME_MAX_SIZE];
         ~NVS();
 
         uint8_t get_u8(const char* key) const;
@@ -41,34 +42,82 @@ namespace mirra::fs
         void set_str(const char* key, const char* value);
         void set_blob(const char* key, const void* value, size_t size);
 
-    public:
-        template <class T> class NVSValue
-        {
-            const char* key;
-            const NVS& nvs;
-
-            NVSValue(const char* key, const NVS& nvs) : key{key}, nvs{nvs} {}
-            operator const T&() const { return nvs.get<T>(key); }
-        };
-
-        NVS(const char* name);
         template <class T> T get(const char* key) const;
         template <class T> void set(const char* key, T&& value);
 
-        template <class T> NVSValue<T>& operator[](const char* key) { return NVSValue(key, this); }
+    public:
+        NVS(const char* name);
+
+        template <class T> class Value
+        {
+            const char* key;
+            NVS& nvs;
+
+            Value(const char* key, const NVS& nvs) : key{key}, nvs{nvs} {}
+            Value(const Value& other) = delete;
+            Value(Value&&) = delete;
+
+        public:
+            Value& operator=(const T& other)
+            {
+                nvs.set(key, other);
+                return *this;
+            }
+            Value& operator=(T&& other)
+            {
+                nvs.set(key, other);
+                return *this;
+            }
+            operator T() const { return nvs.get<T>(key); }
+        };
+
+        class Iterator
+        {
+            nvs_iterator_t nvsIterator;
+            nvs_entry_info_t nvsInfo;
+
+            Iterator(const char* name) : nvsIterator{nvs_entry_find("nvs", name, NVS_TYPE_ANY)} {}
+            Iterator(nullptr_t) : nvsIterator{nullptr} {}
+
+        public:
+            Iterator operator++()
+            {
+                nvsIterator = nvs_entry_next(nvsIterator);
+                return *this;
+            }
+            bool operator!=(const Iterator& other) const { return nvsIterator != other.nvsIterator; }
+            const char* operator*()
+            {
+                nvs_entry_info(nvsIterator, &nvsInfo);
+                return nvsInfo.key;
+            }
+            ~Iterator() { nvs_release_iterator(nvsIterator); }
+            friend class NVS;
+        };
+        template <class T> Value<T>& operator[](const char* key) const& { return Value(key, this); }
+        template <class T> T& operator[](const char* key) const&& { return Value(key, this); }
+
+        Iterator begin() { return Iterator(name); };
+        Iterator end() { return Iterator(nullptr); };
 
         static void init();
     };
 
     class File
     {
-        bool stale{false};
+    private:
+        const esp_partition_t* part;
+
+    protected:
+        size_t head;
+        size_t tail;
+
+        void pop();
 
     public:
-        void commit();
-        void erase();
-
         File(const char* name);
+        void push(void* buffer, size_t size);
+
         ~File();
     };
 #include <FS.tpp>
