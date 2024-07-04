@@ -11,9 +11,16 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
-    gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    gpio_deep_sleep_hold_dis();
     pinMode(pins.peripheralPowerPin, OUTPUT);
     digitalWrite(pins.peripheralPowerPin, HIGH);
+    gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    Serial.println("Powering on peripherals...");
+    // wait for power propagation
+    esp_sleep_enable_timer_wakeup(10 * 1000);
+    esp_light_sleep_start();
+    esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
+
     Wire.begin(pins.sdaPin, pins.sclPin); // i2c
     pinMode(pins.bootPin, INPUT);
     Serial.println("I2C wire initialised.");
