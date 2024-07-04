@@ -15,16 +15,25 @@ template <class T> T NVS::get(const char* key) const
     return buffer;
 }
 
-template <> void NVS::set(const char* key, uint8_t&& value) { set_u8(key, value); }
-template <> void NVS::set(const char* key, uint16_t&& value) { set_u16(key, value); }
-template <> void NVS::set(const char* key, uint32_t&& value) { set_u32(key, value); }
-template <> void NVS::set(const char* key, uint64_t&& value) { set_u64(key, value); }
+template <> void NVS::set(const char* key, const uint8_t& value) { set_u8(key, value); }
+template <> void NVS::set(const char* key, const uint16_t& value) { set_u16(key, value); }
+template <> void NVS::set(const char* key, const uint32_t& value) { set_u32(key, value); }
+template <> void NVS::set(const char* key, const uint64_t& value) { set_u64(key, value); }
 
-template <> void NVS::set(const char* key, int8_t&& value) { set_i8(key, value); }
-template <> void NVS::set(const char* key, int16_t&& value) { set_i16(key, value); }
-template <> void NVS::set(const char* key, int32_t&& value) { set_i32(key, value); }
-template <> void NVS::set(const char* key, int64_t&& value) { set_i64(key, value); }
+template <> void NVS::set(const char* key, const int8_t& value) { set_i8(key, value); }
+template <> void NVS::set(const char* key, const int16_t& value) { set_i16(key, value); }
+template <> void NVS::set(const char* key, const int32_t& value) { set_i32(key, value); }
+template <> void NVS::set(const char* key, const int64_t& value) { set_i64(key, value); }
 
-template <> void NVS::set(const char* key, const char*&& value) { set_str(key, value); }
+template <> void NVS::set(const char* key, const char* const& value) { set_str(key, value); }
 
-template <class T> void NVS::set(const char* key, T&& value) { set_blob(key, &std::forward<T>(value), sizeof(T)); }
+template <class T> void NVS::set(const char* key, const T& value) { set_blob(key, &value, sizeof(T)); }
+
+template <class T> T File::read(size_t address)
+{
+    T buffer;
+    read(address, &buffer, sizeof(T));
+    return buffer;
+}
+
+template <class T> void File::write(size_t address, const T& value) { write(address, &value, sizeof(T)); }

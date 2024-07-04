@@ -152,6 +152,13 @@ void NVS::set_blob(const char* key, const void* value, size_t size)
         ; // log error
 }
 
+bool NVS::exists(const char* key) const
+{
+    int8_t dummy;
+    esp_err_t err = nvs_get_i8(handle, key, &dummy);
+    return (err == ESP_ERR_NVS_TYPE_MISMATCH) || (err == ESP_OK);
+}
+
 void NVS::init()
 {
     esp_err_t err = nvs_flash_init();
@@ -160,7 +167,7 @@ void NVS::init()
         // NVS partition was truncated and needs to be erased
         // Retry nvs_flash_init
         nvs_flash_erase();
-        err = nvs_flash_init() == ESP_OK;
+        err = nvs_flash_init();
     }
     if (err != ESP_OK)
     {
@@ -193,19 +200,37 @@ void File::writeSector()
         ; // log error
 }
 
-void File::read(size_t address, void* buffer, size_t size) {}
+void File::read(size_t address, void* buffer, size_t size)
+{
+    // if address in sector buffer: read straight from it
+    if (inSector(address))
+    {
+        size_t toRead = std::min(sectorSize - (address - sectorAddress), size);
+        std::memcpy(buffer, &sectorBuffer.get()[address - sectorAddress], toRead);
+        address += toRead;
+        buffer = static_cast<uint8_t*>(buffer) + toRead;
+        size -= toRead;
+    }
+    // else (or if not all requested data in sector buffer), read straight from flash
+    if (size > 0)
+    {
+        esp_partition_read(part, address, buffer, size);
+    }
+}
 
 void File::write(size_t address, const void* buffer, size_t size)
 {
-    size_t written = 0;
     while (size > 0)
     {
-        address += written;
         if (!inSector(address))
             readSector(toSectorAddress(address));
-        size_t address - sectorAddress;
 
-        std::memcpy(&sectorBuffer.get()[address - sectorAddress], &buffer[written], sectorSize -) written +=
+        size_t toWrite = std::min(sectorSize - (address - sectorAddress), size);
+        std::memcpy(&sectorBuffer.get()[address - sectorAddress], buffer, toWrite);
+        address += toWrite;
+        buffer = static_cast<const uint8_t*>(buffer) + toWrite;
+        size -= toWrite;
+        sectorDirty = true;
     }
 }
 
@@ -216,3 +241,5 @@ void File::flush()
         writeSector();
     }
 }
+
+File::~File() { flush(); }

@@ -30,21 +30,22 @@ namespace mirra::fs
         void get_str(const char* key, char* buffer, size_t size) const;
         void get_blob(const char* key, void* buffer, size_t size) const;
 
-        void set_u8(const char* key, const uint8_t value);
-        void set_u16(const char* key, const uint16_t value);
-        void set_u32(const char* key, const uint32_t value);
-        void set_u64(const char* key, const uint64_t value);
+        void set_u8(const char* key, uint8_t value);
+        void set_u16(const char* key, uint16_t value);
+        void set_u32(const char* key, uint32_t value);
+        void set_u64(const char* key, uint64_t value);
 
-        void set_i8(const char* key, const int8_t value);
-        void set_i16(const char* key, const int16_t value);
-        void set_i32(const char* key, const int32_t value);
-        void set_i64(const char* key, const int64_t value);
+        void set_i8(const char* key, int8_t value);
+        void set_i16(const char* key, int16_t value);
+        void set_i32(const char* key, int32_t value);
+        void set_i64(const char* key, int64_t value);
 
         void set_str(const char* key, const char* value);
         void set_blob(const char* key, const void* value, size_t size);
 
+        bool exists(const char* key) const;
         template <class T> T get(const char* key) const;
-        template <class T> void set(const char* key, T&& value);
+        template <class T> void set(const char* key, const T& value);
 
     public:
         NVS(const char* name);
@@ -59,6 +60,7 @@ namespace mirra::fs
             Value(Value&&) = delete;
 
         public:
+            bool exists() { return nvs.exists(key); }
             Value& operator=(const T& other)
             {
                 nvs.set(key, other);
@@ -96,7 +98,7 @@ namespace mirra::fs
             friend class NVS;
         };
         template <class T> Value<T>& operator[](const char* key) const& { return Value(key, this); }
-        template <class T> T& operator[](const char* key) const&& { return Value(key, this); }
+        template <class T> T operator[](const char* key) const&& { return Value(key, this); }
 
         Iterator begin() { return Iterator(name); };
         Iterator end() { return Iterator(nullptr); };
@@ -119,13 +121,21 @@ namespace mirra::fs
         void readSector(size_t sectorAddress);
         void writeSector();
 
+    protected:
+        size_t head;
+        size_t tail;
+
     public:
         File(const char* name);
 
-        void push(const void* buffer, size_t size);
-        void write(size_t address, const void* buffer, size_t size);
         void read(size_t address, void* buffer, size_t size);
-        template <class T> void read(size_t address);
+        template <class T> T read(size_t address);
+
+        void write(size_t address, const void* buffer, size_t size);
+        template <class T> void write(size_t address, const T& value);
+
+        void push(const void* buffer, size_t size);
+        template <class T> void push(const T& value);
 
         void flush();
 
