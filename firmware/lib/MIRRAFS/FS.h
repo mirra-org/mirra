@@ -15,7 +15,6 @@ namespace mirra::fs
     private:
         nvs_handle_t handle;
         char name[NVS_KEY_NAME_MAX_SIZE];
-        ~NVS();
 
         uint8_t get_u8(const char* key) const;
         uint16_t get_u16(const char* key) const;
@@ -49,18 +48,19 @@ namespace mirra::fs
 
     public:
         NVS(const char* name);
+        ~NVS();
 
         template <class T> class Value
         {
             const char* key;
             NVS& nvs;
 
-            Value(const char* key, const NVS& nvs) : key{key}, nvs{nvs} {}
+            Value(const char* key, NVS& nvs) : key{key}, nvs{nvs} {}
             Value(const Value& other) = delete;
             Value(Value&&) = delete;
 
         public:
-            bool exists() { return nvs.exists(key); }
+            bool exists() const { return nvs.exists(key); }
             Value& operator=(const T& other)
             {
                 nvs.set(key, other);
@@ -72,6 +72,7 @@ namespace mirra::fs
                 return *this;
             }
             operator T() const { return nvs.get<T>(key); }
+            friend class NVS;
         };
 
         class Iterator
@@ -97,8 +98,8 @@ namespace mirra::fs
             ~Iterator() { nvs_release_iterator(nvsIterator); }
             friend class NVS;
         };
-        template <class T> Value<T>& operator[](const char* key) const& { return Value(key, this); }
-        template <class T> T operator[](const char* key) const&& { return Value(key, this); }
+        template <class T> Value<T> getValue(const char* key) & { return Value<T>(key, *this); }
+        template <class T> T getValue(const char* key) && { return Value<T>(key, *this); }
 
         Iterator begin() { return Iterator(name); };
         Iterator end() { return Iterator(nullptr); };
@@ -108,40 +109,36 @@ namespace mirra::fs
 
     class File
     {
-    private:
+    protected:
         const esp_partition_t* part;
 
+    private:
+        char* name;
+        static constexpr size_t partitionNameMaxSize = 16;
         static constexpr size_t sectorSize = 4096;
         std::unique_ptr<uint8_t[sectorSize]> sectorBuffer{};
         size_t sectorAddress;
         bool sectorDirty;
 
-        size_t toSectorAddress(size_t address);
-        bool inSector(size_t address);
+        size_t toSectorAddress(size_t address) const;
+        bool inSector(size_t address) const;
         void readSector(size_t sectorAddress);
         void writeSector();
 
-    protected:
-        size_t head;
-        size_t tail;
-
     public:
         File(const char* name);
+        ~File();
 
-        void read(size_t address, void* buffer, size_t size);
-        template <class T> T read(size_t address);
+        const char* getName() { return name; };
+        void read(size_t address, void* buffer, size_t size) const;
+        template <class T> T read(size_t address) const;
 
         void write(size_t address, const void* buffer, size_t size);
         template <class T> void write(size_t address, const T& value);
 
-        void push(const void* buffer, size_t size);
-        template <class T> void push(const T& value);
-
         void flush();
-
-        ~File();
     };
-#include <FS.tpp>
+#include "FS.tpp"
 }
 
 #endif

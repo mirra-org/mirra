@@ -29,7 +29,7 @@ template <> void NVS::set(const char* key, const char* const& value) { set_str(k
 
 template <class T> void NVS::set(const char* key, const T& value) { set_blob(key, &value, sizeof(T)); }
 
-template <class T> T File::read(size_t address)
+template <class T> T File::read(size_t address) const
 {
     T buffer;
     read(address, &buffer, sizeof(T));

@@ -175,11 +175,16 @@ void NVS::init()
     }
 }
 
-File::File(const char* name) : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)} {}
+File::File(const char* name) : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)}
+{
+    strncpy(this->name, name, partitionNameMaxSize);
+}
 
-size_t File::toSectorAddress(size_t address) { return (address / sectorSize) * sectorSize; }
+File::~File() { flush(); }
 
-bool File::inSector(size_t address) { return sectorAddress <= address && address < sectorAddress + sectorSize; }
+size_t File::toSectorAddress(size_t address) const { return (address / sectorSize) * sectorSize; }
+
+bool File::inSector(size_t address) const { return sectorAddress <= address && address < sectorAddress + sectorSize; }
 
 void File::readSector(size_t sectorAddress)
 {
@@ -188,6 +193,7 @@ void File::readSector(size_t sectorAddress)
     if (err != ESP_OK)
         ; // log error
     this->sectorAddress = sectorAddress;
+    sectorDirty = false;
 }
 
 void File::writeSector()
@@ -200,7 +206,7 @@ void File::writeSector()
         ; // log error
 }
 
-void File::read(size_t address, void* buffer, size_t size)
+void File::read(size_t address, void* buffer, size_t size) const
 {
     // if address in sector buffer: read straight from it
     if (inSector(address))
@@ -212,9 +218,13 @@ void File::read(size_t address, void* buffer, size_t size)
         size -= toRead;
     }
     // else (or if not all requested data in sector buffer), read straight from flash
-    if (size > 0)
+    while (size > 0)
     {
+        size_t toRead = std::min(part->size - address, size);
         esp_partition_read(part, address, buffer, size);
+        address = (address + toRead) % part->size;
+        buffer = static_cast<uint8_t*>(buffer) + toRead;
+        size -= toRead;
     }
 }
 
@@ -227,7 +237,7 @@ void File::write(size_t address, const void* buffer, size_t size)
 
         size_t toWrite = std::min(sectorSize - (address - sectorAddress), size);
         std::memcpy(&sectorBuffer.get()[address - sectorAddress], buffer, toWrite);
-        address += toWrite;
+        address = (address + toWrite) % part->size;
         buffer = static_cast<const uint8_t*>(buffer) + toWrite;
         size -= toWrite;
         sectorDirty = true;
@@ -241,5 +251,3 @@ void File::flush()
         writeSector();
     }
 }
-
-File::~File() { flush(); }
