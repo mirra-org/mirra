@@ -27,13 +27,31 @@ template <> void NVS::set(const char* key, const int64_t& value) { set_i64(key, 
 
 template <> void NVS::set(const char* key, const char* const& value) { set_str(key, value); }
 
-template <class T> void NVS::set(const char* key, const T& value) { set_blob(key, &value, sizeof(T)); }
+template <class T> void NVS::set(const char* key, T&& value)
+{
+    set_blob(key, &std::forward<T>(value), sizeof(T));
+}
 
-template <class T> T File::read(size_t address) const
+template <class T> T Partition::read(size_t address) const
 {
     T buffer;
     read(address, &buffer, sizeof(T));
     return buffer;
 }
 
-template <class T> void File::write(size_t address, const T& value) { write(address, &value, sizeof(T)); }
+template <class T> void Partition::write(size_t address, const T& value)
+{
+    write(address, &value, sizeof(T));
+}
+
+template <class T> T FIFOFile::read(size_t address) const
+{
+    T buffer;
+    read(address, &buffer, sizeof(T));
+    return buffer;
+}
+
+template <class T> void FIFOFile::write(size_t address, const T& value)
+{
+    write(address, &value, sizeof(T));
+}

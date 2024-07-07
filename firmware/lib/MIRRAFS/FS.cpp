@@ -175,18 +175,33 @@ void NVS::init()
     }
 }
 
-File::File(const char* name) : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED, name)}
+Partition::Partition(const char* name)
+    : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED,
+                                    name)},
+      sectorBuffer{new std::array<uint8_t, sectorSize>}
 {
     strncpy(this->name, name, partitionNameMaxSize);
 }
 
-File::~File() { flush(); }
+Partition::~Partition() { flush(); }
 
-size_t File::toSectorAddress(size_t address) const { return (address / sectorSize) * sectorSize; }
+constexpr size_t Partition::toSectorAddress(size_t address)
+{
+    return (address / sectorSize) * sectorSize;
+}
 
-bool File::inSector(size_t address) const { return sectorAddress <= address && address < sectorAddress + sectorSize; }
+void Partition::loadFirstSector(size_t address)
+{
+    sectorDirty = false;
+    readSector(toSectorAddress(address));
+}
 
-void File::readSector(size_t sectorAddress)
+bool Partition::inSector(size_t address) const
+{
+    return sectorAddress <= address && address < sectorAddress + sectorSize;
+}
+
+void Partition::readSector(size_t sectorAddress)
 {
     flush();
     esp_err_t err = esp_partition_read(part, sectorAddress, sectorBuffer.get(), sectorSize);
@@ -196,7 +211,7 @@ void File::readSector(size_t sectorAddress)
     sectorDirty = false;
 }
 
-void File::writeSector()
+void Partition::writeSector()
 {
     esp_err_t err = esp_partition_erase_range(part, sectorAddress, sectorSize);
     if (err != ESP_OK)
@@ -206,7 +221,7 @@ void File::writeSector()
         ; // log error
 }
 
-void File::read(size_t address, void* buffer, size_t size) const
+void Partition::read(size_t address, void* buffer, size_t size) const
 {
     // if address in sector buffer: read straight from it
     if (inSector(address))
@@ -228,7 +243,7 @@ void File::read(size_t address, void* buffer, size_t size) const
     }
 }
 
-void File::write(size_t address, const void* buffer, size_t size)
+void Partition::write(size_t address, const void* buffer, size_t size)
 {
     while (size > 0)
     {
@@ -244,10 +259,56 @@ void File::write(size_t address, const void* buffer, size_t size)
     }
 }
 
-void File::flush()
+void Partition::flush()
 {
     if (sectorDirty)
     {
         writeSector();
     }
+}
+
+FIFOFile::FIFOFile(const char* name) : Partition(name)
+{
+    NVS nvs{getName()};
+    head = nvs.getValue<size_t>("head");
+    tail = nvs.getValue<size_t>("tail");
+    size = nvs.getValue<size_t>("size");
+    loadFirstSector(head);
+}
+
+FIFOFile::~FIFOFile()
+{
+    NVS nvs{getName()};
+    nvs.getValue<size_t>("head") = head;
+    nvs.getValue<size_t>("tail") = tail;
+    nvs.getValue<size_t>("size") = size;
+}
+
+size_t FIFOFile::freeSpace() const { return part->size - size; }
+
+void FIFOFile::read(size_t address, void* buffer, size_t size) const
+{
+    if (address >= this->size)
+        return;
+    Partition::read((tail + address) % part->size, buffer, std::min(size, this->size - address));
+}
+
+void FIFOFile::push(const void* buffer, size_t size)
+{
+    this->size = (this->size + size) - (freeSpace() < size ? cutTail(size - freeSpace()) : 0);
+    Partition::write(head, buffer, size);
+    head = (head + size) % part->size;
+}
+
+void FIFOFile::write(size_t address, const void* buffer, size_t size)
+{
+    if (address >= this->size)
+        return;
+    Partition::write((tail + address) % part->size, buffer, std::min(size, this->size - address));
+}
+
+size_t FIFOFile::cutTail(size_t cutSize)
+{
+    tail = (tail + cutSize) % part->size;
+    return cutSize;
 }
