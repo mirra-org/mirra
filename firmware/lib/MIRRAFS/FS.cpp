@@ -80,6 +80,16 @@ int64_t NVS::get_i64(const char* key) const
     return value;
 }
 
+template <> uint8_t NVS::get(const char* key) const { return get_u8(key); }
+template <> uint16_t NVS::get(const char* key) const { return get_u16(key); }
+template <> uint32_t NVS::get(const char* key) const { return get_u32(key); }
+template <> uint64_t NVS::get(const char* key) const { return get_u64(key); }
+
+template <> int8_t NVS::get(const char* key) const { return get_i8(key); }
+template <> int16_t NVS::get(const char* key) const { return get_i16(key); }
+template <> int32_t NVS::get(const char* key) const { return get_i32(key); }
+template <> int64_t NVS::get(const char* key) const { return get_i64(key); }
+
 void NVS::get_str(const char* key, char* buffer, size_t size) const
 {
     if (nvs_get_str(handle, key, buffer, &size) != ESP_OK)
@@ -151,6 +161,18 @@ void NVS::set_blob(const char* key, const void* value, size_t size)
     if (nvs_set_blob(handle, key, value, size) != ESP_OK)
         ; // log error
 }
+
+template <> void NVS::set(const char* key, const uint8_t& value) { set_u8(key, value); }
+template <> void NVS::set(const char* key, const uint16_t& value) { set_u16(key, value); }
+template <> void NVS::set(const char* key, const uint32_t& value) { set_u32(key, value); }
+template <> void NVS::set(const char* key, const uint64_t& value) { set_u64(key, value); }
+
+template <> void NVS::set(const char* key, const int8_t& value) { set_i8(key, value); }
+template <> void NVS::set(const char* key, const int16_t& value) { set_i16(key, value); }
+template <> void NVS::set(const char* key, const int32_t& value) { set_i32(key, value); }
+template <> void NVS::set(const char* key, const int64_t& value) { set_i64(key, value); }
+
+template <> void NVS::set(const char* key, const char* const& value) { set_str(key, value); }
 
 bool NVS::exists(const char* key) const
 {
@@ -270,9 +292,9 @@ void Partition::flush()
 FIFOFile::FIFOFile(const char* name) : Partition(name)
 {
     NVS nvs{getName()};
-    head = nvs.getValue<size_t>("head");
-    tail = nvs.getValue<size_t>("tail");
-    size = nvs.getValue<size_t>("size");
+    head = nvs.getValue<size_t>("head").getOrCreate(0);
+    tail = nvs.getValue<size_t>("tail").getOrCreate(0);
+    size = nvs.getValue<size_t>("size").getOrCreate(0);
     loadFirstSector(head);
 }
 

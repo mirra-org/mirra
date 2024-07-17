@@ -4,21 +4,26 @@ using namespace mirra;
 
 Log Log::log{};
 
-constexpr std::string_view Log::levelToString(Level level)
+size_t Log::File::cutTail(size_t cutSize)
 {
-    switch (level)
+    static constexpr size_t searchSize{128};
+    uint8_t searchBuffer[searchSize];
+    while (true)
     {
-    case Level::ERROR:
-        return "ERROR: ";
-    case Level::INFO:
-        return "INFO: ";
-    case Level::DEBUG:
-        return "DEBUG: ";
+        read(cutSize, &searchBuffer, searchSize);
+        uint8_t* found = reinterpret_cast<uint8_t*>(std::memchr(searchBuffer, '\n', searchSize));
+        if (found == nullptr)
+        {
+            cutSize += searchSize;
+        }
+        else
+        {
+            cutSize += std::distance(searchBuffer, found);
+            break;
+        }
     }
-    return "NONE: ";
+    return cutSize;
 }
-
-size_t Log::File::cutTail(size_t cutSize) {}
 
 void Log::init() { Log::log.file = Log::File(); }
 

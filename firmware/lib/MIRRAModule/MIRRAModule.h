@@ -59,12 +59,36 @@ protected:
     class SensorFile final : fs::FIFOFile
     {
         size_t cutTail(size_t cutSize);
+        size_t reader;
 
     public:
-        SensorFile() : FIFOFile("data") {}
+        struct DataEntry
+        {
+            using Flags = Message<SENSOR_DATA>::Flags;
+            using SensorValueArray = Message<SENSOR_DATA>::SensorValueArray;
+
+            MACAddress source;
+            Flags flags;
+            uint32_t time;
+            SensorValueArray values;
+
+            static constexpr size_t getSize(Flags flags)
+            {
+                return sizeof(source) + sizeof(flags) + sizeof(time) +
+                       flags.nValues * sizeof(SensorValue);
+            }
+            constexpr size_t getSize() { return getSize(flags); }
+        } __attribute__((packed));
+
+        SensorFile();
+        ~SensorFile();
         using FIFOFile::getSize;
         void push(const Message<SENSOR_DATA>& message);
+        void push(const MACAddress& source, uint32_t time, uint8_t nValues,
+                  const std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values);
 
+        std::optional<DataEntry> getFirstUnuploaded();
+        void setUploaded();
         using FIFOFile::read;
     };
 
@@ -96,4 +120,5 @@ protected:
     CommandEntry commandEntry;
 };
 };
+
 #endif

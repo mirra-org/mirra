@@ -166,6 +166,8 @@ public:
     size_t getSize() const { return size; }
     size_t freeSpace() const;
 
+    using Partition::getName;
+
     void read(size_t address, void* buffer, size_t size) const;
     template <class T> T read(size_t address) const;
 
@@ -177,7 +179,8 @@ public:
 
     using Partition::flush;
 };
-#include "FS.tpp"
+
+#include "./FS.tpp"
 }
 
 #endif

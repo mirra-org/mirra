@@ -45,20 +45,54 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
     Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
 }
 
+MIRRAModule::SensorFile::SensorFile() : FIFOFile("data")
+{
+    fs::NVS nvs{getName()};
+    reader = nvs.getValue<size_t>("reader").getOrCreate(0);
+}
+
+MIRRAModule::SensorFile::~SensorFile()
+{
+    fs::NVS nvs{getName()};
+    nvs.getValue<size_t>("reader") = reader;
+}
+
 size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
 {
     size_t removed{0};
     while (removed < cutSize)
     {
-        removed += sizeof(MACAddress) + sizeof(Message<SENSOR_DATA>::flags) +
-                   sizeof(Message<SENSOR_DATA>::time) +
-                   (read<Message<SENSOR_DATA>::Flags>(removed + sizeof(MACAddress)).nValues *
-                    sizeof(SensorValue));
+        removed +=
+            DataEntry::getSize(read<Message<SENSOR_DATA>::Flags>(removed + sizeof(MACAddress)));
     }
+    reader = reader < removed ? 0 : reader - removed;
     return removed;
 }
 
-void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message) { FIFOFile::push(message); }
+std::optional<MIRRAModule::SensorFile::DataEntry> MIRRAModule::SensorFile::getFirstUnuploaded()
+{
+    while (true)
+    {
+        if (reader == getSize())
+            return std::nullopt;
+        DataEntry::Flags flags = read<DataEntry::Flags>(reader + sizeof(MACAddress));
+        if (!flags.uploaded)
+            return read<DataEntry>(reader);
+        reader += DataEntry::getSize(flags);
+    }
+}
+
+void MIRRAModule::SensorFile::setUploaded()
+{
+    DataEntry::Flags flags = read<DataEntry::Flags>(reader + sizeof(MACAddress));
+    flags.uploaded = true;
+    write(reader + sizeof(MACAddress), flags);
+}
+
+void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
+{
+    FIFOFile::push(DataEntry{message.getSource(), message.flags, message.time, message.values});
+}
 
 void MIRRAModule::deepSleep(uint32_t sleepTime)
 {

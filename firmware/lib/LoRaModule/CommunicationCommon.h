@@ -179,7 +179,10 @@ public:
     static const size_t maxNValues =
         (maxLength - headerLength - sizeof(time) - sizeof(flags)) / sizeof(SensorValue);
 
-    std::array<SensorValue, maxNValues> values{};
+    struct SensorValueArray : public std::array<SensorValue, Message<SENSOR_DATA>::maxNValues>
+    {
+    } __attribute__((packed));
+    SensorValueArray values{};
 
     Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues,
             const std::array<SensorValue, maxNValues> values)

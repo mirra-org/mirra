@@ -47,16 +47,6 @@ private:
     template <Log::Level level> size_t printPreamble(const tm& time);
     /// @return String conversion from a level.
     static constexpr std::string_view levelToString(Level level);
-    /// @return A format specifier string matched to the type argument.
-    template <class T> static constexpr std::string_view typeToFormatSpecifier();
-    template <class T> static constexpr std::string_view rawTypeToFormatSpecifier();
-    /// @return A format string matched to the given type arguments.
-    template <class... Ts> static constexpr auto createFormatString();
-    /// @brief Type-safe variadic print function. Uses compile-time format string instantiation to
-    /// ensure safety in using printf.
-    /// @param buffer Buffer to which to print.
-    /// @param max Max number of characters to print to buffer.
-    template <class... Ts> size_t printv(char* buffer, size_t max, Ts&&... args);
     /// @brief Prints to the logging buffer and forwards to (if enabled) the output serial and
     /// logfile.
     /// @tparam level Log level of printed message.
@@ -83,7 +73,18 @@ public:
 
     ~Log() = default;
 };
-#include "logging.tpp"
+
+/// @return A format specifier string matched to the type argument.
+template <class T> constexpr std::string_view typeToFormatSpecifier();
+/// @return A format string matched to the given type arguments.
+template <class... Ts> constexpr auto createFormatString();
+/// @brief Type-safe variadic print function. Uses compile-time format string instantiation to
+/// ensure safety in using printf.
+/// @param buffer Buffer to which to print.
+/// @param max Max number of characters to print to buffer.
+template <class... Ts> size_t printv(char* buffer, size_t max, Ts&&... args);
+
+#include "./logging.tpp"
 }
 
 #endif

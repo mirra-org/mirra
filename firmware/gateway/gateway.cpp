@@ -2,6 +2,8 @@
 #include <cstring>
 #include <esp_sntp.h>
 
+using namespace mirra;
+
 void Node::timeConfig(Message<TIME_CONFIG>& m)
 {
     this->sampleInterval = m.getSampleInterval();
@@ -24,7 +26,8 @@ void Node::naiveTimeConfig(uint32_t cTime)
 
 Message<TIME_CONFIG> Node::currentTimeConfig(const MACAddress& src, uint32_t cTime)
 {
-    return Message<TIME_CONFIG>(src, mac, cTime, sampleInterval, sampleRounding, sampleOffset, commInterval, nextCommTime, maxMessages);
+    return Message<TIME_CONFIG>(src, mac, cTime, sampleInterval, sampleRounding, sampleOffset,
+                                commInterval, nextCommTime, maxMessages);
 }
 
 RTC_DATA_ATTR bool initialBoot{true};
@@ -43,13 +46,13 @@ RTC_DATA_ATTR uint32_t sampleRounding{DEFAULT_SAMPLE_ROUNDING};
 RTC_DATA_ATTR uint32_t sampleOffset{DEFAULT_SAMPLE_OFFSET};
 RTC_DATA_ATTR uint32_t commInterval{DEFAULT_COMM_INTERVAL};
 
-// TODO: Instead of using this lambda to determine if a node is lost, use a bool stored in each node that
-// signifies if a node is ' well-scheduled ', implying both that the node is not lost and that it follows
-// the scheduled comm time of the previous node tightly (i.e., without scheduling gaps). Removal of a node
-// would imply loss of well-scheduledness of all following nodes, and changing of the comm period would imply
-// loss of well-scheduledness for all nodes.
-// Currently only the latter portion of this functionality is available with just the isLost lambda,
-// During the comm period, a node that is not 'well-scheduled' would be scheduled so that it would become so.
+// TODO: Instead of using this lambda to determine if a node is lost, use a bool stored in each node
+// that signifies if a node is ' well-scheduled ', implying both that the node is not lost and that
+// it follows the scheduled comm time of the previous node tightly (i.e., without scheduling gaps).
+// Removal of a node would imply loss of well-scheduledness of all following nodes, and changing of
+// the comm period would imply loss of well-scheduledness for all nodes. Currently only the latter
+// portion of this functionality is available with just the isLost lambda, During the comm period, a
+// node that is not 'well-scheduled' would be scheduled so that it would become so.
 
 auto lambdaIsLost = [](const Node& e) { return e.getCommInterval() != commInterval; };
 
@@ -58,13 +61,6 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins)
     if (initialBoot)
     {
         Log::info("First boot.");
-        // manage filesystem
-        updateNodesFile();
-        if (!LittleFS.exists(DATA_FP))
-        {
-            LittleFS.open(DATA_FP, "w", true).close();
-        }
-
         Commands(this).rtcUpdateTime();
         initialBoot = false;
     }
@@ -134,19 +130,26 @@ void Gateway::discovery()
         }
         else
         {
-            uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost) ? cTime + commInterval : nextScheduledCommTime()};
-            Message<TIME_CONFIG> timeConfig{lora.getMACAddress(), candidate,      cTime,
-                                            sampleInterval,       sampleRounding, sampleOffset,
-                                            commInterval,         commTime,       MAX_MESSAGES(commInterval, sampleInterval)};
-            Log::debug("Time config constructed. cTime = ", cTime, " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
-                       " sampleOffset = ", sampleOffset, " commInterval = ", commInterval, " comTime = ", commTime);
+            uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)
+                                  ? cTime + commInterval
+                                  : nextScheduledCommTime()};
+            Message<TIME_CONFIG> timeConfig{
+                lora.getMACAddress(), candidate,      cTime,
+                sampleInterval,       sampleRounding, sampleOffset,
+                commInterval,         commTime,       MAX_MESSAGES(commInterval, sampleInterval)};
+            Log::debug("Time config constructed. cTime = ", cTime,
+                       " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
+                       " sampleOffset = ", sampleOffset, " commInterval = ", commInterval,
+                       " comTime = ", commTime);
             nodes.emplace_back(timeConfig);
             lora.sendMessage(timeConfig);
         }
-        auto timeAck{lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, candidate)};
+        auto timeAck{
+            lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, candidate)};
         if (!timeAck)
         {
-            Log::error("Error while receiving ack to time config message from ", candidate.toString(), ". Aborting discovery.");
+            Log::error("Error while receiving ack to time config message from ",
+                       candidate.toString(), ". Aborting discovery.");
             if (duplicate)
                 removeNode(duplicate->get());
             else
@@ -162,20 +165,21 @@ void Gateway::discovery()
 void Gateway::nodesFromFile()
 {
     Log::debug("Recovering nodes from file...");
-    File nodesFile{LittleFS.open(NODES_FP)};
-    uint8_t size = nodesFile.read();
-    Log::debug(size, " nodes found in ", NODES_FP);
-    nodes.resize(size);
-    nodesFile.read((uint8_t*)nodes.data(), static_cast<size_t>(size) * sizeof(Node));
-    nodesFile.close();
+    fs::NVS nvsNodes{"nodes"};
+    for (const char* nodeMac : nvsNodes)
+    {
+        nodes.push_back(nvsNodes.getValue<Node>(nodeMac));
+    }
+    Log::debug(nodes.size(), " nodes found in NVS.");
 }
 
 void Gateway::updateNodesFile()
 {
-    File nodesFile = LittleFS.open(NODES_FP, "w", true);
-    nodesFile.write(nodes.size());
-    nodesFile.write((uint8_t*)nodes.data(), nodes.size() * sizeof(Node));
-    nodesFile.close();
+    fs::NVS nvsNodes{"nodes"};
+    for (const Node& node : nodes)
+    {
+        nvsNodes.getValue<Node>(node.getMACAddress().toString()) = node;
+    }
 }
 
 void Gateway::commPeriod()
@@ -186,14 +190,17 @@ void Gateway::commPeriod()
     for (const Node& n : nodes)
         expectedMessages += n.getMaxMessages();
     data.reserve(expectedMessages);
-    auto lambdaByNextCommTime = [](const Node& a, const Node& b) { return a.getNextCommTime() < b.getNextCommTime(); };
+    auto lambdaByNextCommTime = [](const Node& a, const Node& b)
+    { return a.getNextCommTime() < b.getNextCommTime(); };
     std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
     uint32_t farCommTime = -1;
     for (Node& n : nodes)
     {
         if (n.getNextCommTime() > farCommTime)
             break;
-        farCommTime = n.getNextCommTime() + 2 * (COMM_PERIOD_LENGTH(MAX_MESSAGES(commInterval, n.getSampleInterval())) + COMM_PERIOD_PADDING);
+        farCommTime = n.getNextCommTime() +
+                      2 * (COMM_PERIOD_LENGTH(MAX_MESSAGES(commInterval, n.getSampleInterval())) +
+                           COMM_PERIOD_PADDING);
         if (!nodeCommPeriod(n, data))
             n.naiveTimeConfig(rtc.getSysTime());
     }
@@ -206,12 +213,11 @@ void Gateway::commPeriod()
     {
         updateNodesFile();
     }
-    File dataFile = LittleFS.open(DATA_FP, "a");
-    for (Message<SENSOR_DATA>& m : data)
+    SensorFile file{};
+    for (const Message<SENSOR_DATA>& m : data)
     {
-        storeSensorData(m, dataFile);
+        file.push(m);
     }
-    dataFile.close();
     commPeriods++;
 }
 
@@ -221,7 +227,8 @@ uint32_t Gateway::nextScheduledCommTime()
     {
         const Node& n{nodes[nodes.size() - i]};
         if (!lambdaIsLost(n))
-            return n.getNextCommTime() + COMM_PERIOD_LENGTH(n.getMaxMessages()) + COMM_PERIOD_PADDING;
+            return n.getNextCommTime() + COMM_PERIOD_LENGTH(n.getMaxMessages()) +
+                   COMM_PERIOD_PADDING;
     }
     Log::error("Next scheduled comm time was asked but all nodes are lost!");
     return -1;
@@ -233,23 +240,28 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
     if (cTime > n.getNextCommTime())
     {
         Log::error("Node ", n.getMACAddress().toString(),
-                   "'s comm time was faultily scheduled before this gateway's comm period. Skipping communication with this node.");
+                   "'s comm time was faultily scheduled before this gateway's comm period. "
+                   "Skipping communication with this node.");
         return false;
     }
-    lightSleepUntil(LISTEN_COMM_PERIOD(n.getNextCommTime())); // light sleep until scheduled comm period
-    uint32_t listenMs{COMM_PERIOD_PADDING * 1000};            // pre-listen in anticipation of message
+    lightSleepUntil(
+        LISTEN_COMM_PERIOD(n.getNextCommTime()));  // light sleep until scheduled comm period
+    uint32_t listenMs{COMM_PERIOD_PADDING * 1000}; // pre-listen in anticipation of message
     size_t messagesReceived{0};
     while (true)
     {
         Log::debug("Awaiting data from ", n.getMACAddress().toString(), " ...");
-        auto sensorData{lora.receiveMessage<SENSOR_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, n.getMACAddress(), listenMs)};
+        auto sensorData{lora.receiveMessage<SENSOR_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS,
+                                                         n.getMACAddress(), listenMs)};
         listenMs = 0;
         if (!sensorData)
         {
-            Log::error("Error while awaiting/receiving data from ", n.getMACAddress().toString(), ". Skipping communication with this node.");
+            Log::error("Error while awaiting/receiving data from ", n.getMACAddress().toString(),
+                       ". Skipping communication with this node.");
             return false;
         }
-        Log::info("Sensor data received from ", n.getMACAddress().toString(), " with length ", sensorData->getLength());
+        Log::info("Sensor data received from ", n.getMACAddress().toString(), " with length ",
+                  sensorData->getLength());
         data.push_back(*sensorData);
         messagesReceived++;
         if (sensorData->isLast() || messagesReceived >= n.getMaxMessages())
@@ -275,13 +287,16 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
                                     commTime,
                                     MAX_MESSAGES(commInterval, n.getSampleInterval())};
     lora.sendMessage(timeConfig);
-    auto timeAck = lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
+    auto timeAck =
+        lora.receiveMessage<ACK_TIME>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, n.getMACAddress());
     if (!timeAck)
     {
-        Log::error("Error while receiving ack to time config message from ", n.getMACAddress().toString(), ". Skipping communication with this node.");
+        Log::error("Error while receiving ack to time config message from ",
+                   n.getMACAddress().toString(), ". Skipping communication with this node.");
         return false;
     }
-    Log::info("Communication with node ", n.getMACAddress().toString(), " successful: ", messagesReceived, " messages received");
+    Log::info("Communication with node ", n.getMACAddress().toString(),
+              " successful: ", messagesReceived, " messages received");
     n.timeConfig(timeConfig);
     return true;
 }
@@ -322,7 +337,8 @@ bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 char* Gateway::createTopic(char* topic, const MACAddress& nodeMAC)
 {
     char macStringBuffer[MACAddress::stringLength];
-    snprintf(topic, topicSize, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(), nodeMAC.toString(macStringBuffer));
+    snprintf(topic, topicSize, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(),
+             nodeMAC.toString(macStringBuffer));
     return topic;
 }
 
@@ -330,52 +346,44 @@ void Gateway::uploadPeriod()
 {
     Log::info("Commencing upload to MQTT server...");
     wifiConnect();
-    File data{LittleFS.open(DATA_FP, "r+")};
+    SensorFile file{};
     if (WiFi.status() == WL_CONNECTED)
     {
         MQTTClient mqtt{mqttServer, mqttPort, mqttIdentity, mqttPsk};
         size_t nErrors{0}; // amount of errors while uploading
         size_t messagesPublished{0};
-        bool upload{true};
-        while (data.available())
+        while (true)
         {
-            uint8_t size = data.read();
-            uint8_t buffer[size];
-            data.read(buffer, size);
-            if (buffer[0] == 0 && upload) // upload flag: not yet uploaded
-            {
-                auto& message{Message<SENSOR_DATA>::fromData(buffer)};
-                char topic[topicSize];
-                createTopic(topic, message.getSource());
+            auto entry = file.getFirstUnuploaded();
+            if (!entry)
+                break; // no more unuploaded entries remaining
+            char topic[topicSize];
+            createTopic(topic, entry->source);
 
-                if (mqtt.clientConnect(lora.getMACAddress()))
+            if (mqtt.clientConnect(lora.getMACAddress()))
+            {
+                if (mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry->getSize()))
                 {
-                    if (mqtt.publish(topic, &buffer[message.headerLength], message.getLength() - message.headerLength))
-                    {
-                        Log::debug("MQTT message succesfully published.");
-                        // mark uploaded
-                        size_t curPos{data.position()};
-                        data.seek(curPos - size);
-                        data.write(1);
-                        data.seek(curPos);
-                        messagesPublished++;
-                    }
-                    else
-                    {
-                        Log::error("Error while publishing to MQTT server. State: ", mqtt.state());
-                        nErrors++;
-                    }
+                    Log::debug("MQTT message succesfully published.");
+                    file.setUploaded();
+                    messagesPublished++;
                 }
                 else
                 {
-                    Log::error("Error while connecting to MQTT server. Aborting upload. State: ", mqtt.state());
-                    upload = false;
+                    Log::error("Error while publishing to MQTT server. State: ", mqtt.state());
+                    nErrors++;
                 }
+            }
+            else
+            {
+                Log::error("Error while connecting to MQTT server. Aborting upload. State: ",
+                           mqtt.state());
+                break;
             }
             if (nErrors >= MAX_MQTT_ERRORS)
             {
                 Log::error("Too many errors while publishing to MQTT server. Aborting upload.");
-                upload = false;
+                break;
             }
         }
         mqtt.disconnect();
@@ -386,8 +394,6 @@ void Gateway::uploadPeriod()
         Log::error("WiFi not connected. Aborting upload to MQTT server...");
     }
     commPeriods = 0;
-    data.seek(0);
-    pruneSensorData(std::move(data), MAX_SENSORDATA_FILESIZE);
 }
 
 void Gateway::parseNodeUpdate(char* update)
@@ -489,7 +495,9 @@ CommandCode Gateway::Commands::rtcSet()
     tm tm{};
     if (strptime(timeBuffer->data(), "%F %T", &tm) == nullptr)
     {
-        Serial.printf("Could not parse '%s' as a date/time value. Ensure the format '2000-03-23 14:32:01' is respected.\n", timeBuffer->data());
+        Serial.printf("Could not parse '%s' as a date/time value. Ensure the format '2000-03-23 "
+                      "14:32:01' is respected.\n",
+                      timeBuffer->data());
         return COMMAND_ERROR;
     }
     else
@@ -518,13 +526,16 @@ CommandCode Gateway::Commands::changeServer()
 
     char identityBuffer[sizeof(mqttIdentity)];
     strncpy(identityBuffer, mqttIdentity, sizeof(mqttIdentity));
-    Serial.printf("Enter the gateway's identity to authenticate with the server (current: '%s') :\n", identityBuffer);
+    Serial.printf(
+        "Enter the gateway's identity to authenticate with the server (current: '%s') :\n",
+        identityBuffer);
     if (!CommandParser::editValue(identityBuffer))
         return COMMAND_ERROR;
 
     char pskBuffer[sizeof(mqttPsk)];
     strncpy(pskBuffer, mqttPsk, sizeof(mqttPsk));
-    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n", pskBuffer);
+    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n",
+                  pskBuffer);
     if (!CommandParser::editValue(pskBuffer))
         return COMMAND_ERROR;
 
@@ -600,7 +611,8 @@ CommandCode Gateway::Commands::printSchedule()
         time_t nextNodeCommTime{static_cast<time_t>(n.getNextCommTime())};
         gmtime_r(&nextNodeCommTime, &time);
         strftime(buffer, timeLength, "%F %T", &time);
-        Serial.printf("%s\t%s\t%u\t%u\n", n.getMACAddress().toString(), buffer, n.getSampleInterval(), n.getMaxMessages());
+        Serial.printf("%s\t%s\t%u\t%u\n", n.getMACAddress().toString(), buffer,
+                      n.getSampleInterval(), n.getMaxMessages());
     }
     return COMMAND_SUCCESS;
 }

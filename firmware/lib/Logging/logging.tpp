@@ -1,3 +1,17 @@
+constexpr std::string_view Log::levelToString(Level level)
+{
+    switch (level)
+    {
+    case Level::ERROR:
+        return "ERROR: ";
+    case Level::INFO:
+        return "INFO: ";
+    case Level::DEBUG:
+        return "DEBUG: ";
+    }
+    return "NONE: ";
+}
+
 template <Log::Level level> size_t Log::printPreamble(const tm& time)
 {
     constexpr size_t timeLength{sizeof("[0000-00-00 00:00:00]")};
@@ -7,25 +21,40 @@ template <Log::Level level> size_t Log::printPreamble(const tm& time)
     return timeLength + levelString.size() - 1;
 }
 
+template <class T> constexpr std::string_view rawTypeToFormatSpecifier();
+template <> constexpr std::string_view rawTypeToFormatSpecifier<const char*>() { return "%s"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<char*>() { return "%s"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<signed int>() { return "%i"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<unsigned int>() { return "%u"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<long signed int>() { return "%i"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<signed char>() { return "%i"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<unsigned char>() { return "%u"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<float>() { return "%f"; }
+template <> constexpr std::string_view rawTypeToFormatSpecifier<char>() { return "%c"; }
+
 // TODO: Clean up the type to format specifier compile-time functionality with proper SFINAE. This
 // here works, but it's messy, requires two functions, and is unruly to extend.
 
-template <class T> constexpr std::string_view Log::typeToFormatSpecifier()
+template <class T> constexpr std::string_view typeToFormatSpecifier()
 {
     using rawType = std::decay_t<T>;
     if constexpr (std::is_enum_v<rawType>)
     {
-        using rawType = std::underlying_type_t<rawType>;
-    }
-    if constexpr (std::is_same_v<std::make_unsigned_t<rawType>, unsigned char>)
-    {
-        if constexpr (std::is_signed_v<rawType>)
+        using underlyingType = std::underlying_type_t<rawType>;
+        if constexpr (std::is_same_v<std::make_unsigned_t<underlyingType>, unsigned char>)
         {
-            return rawTypeToFormatSpecifier<signed int>();
+            if constexpr (std::is_signed_v<underlyingType>)
+            {
+                return rawTypeToFormatSpecifier<signed int>();
+            }
+            else
+            {
+                return rawTypeToFormatSpecifier<unsigned int>();
+            }
         }
         else
         {
-            return rawTypeToFormatSpecifier<unsigned int>();
+            return rawTypeToFormatSpecifier<underlyingType>();
         }
     }
     else
@@ -34,26 +63,7 @@ template <class T> constexpr std::string_view Log::typeToFormatSpecifier()
     }
 }
 
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<const char*>() { return "%s"; }
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char*>() { return "%s"; }
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed int>() { return "%i"; }
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned int>()
-{
-    return "%u";
-}
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<long signed int>()
-{
-    return "%i";
-}
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<signed char>() { return "%i"; }
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<unsigned char>()
-{
-    return "%u";
-}
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<float>() { return "%f"; }
-template <> constexpr std::string_view Log::rawTypeToFormatSpecifier<char>() { return "%c"; }
-
-template <class... Ts> constexpr auto Log::createFormatString()
+template <class... Ts> constexpr auto createFormatString()
 {
     std::array<char, (typeToFormatSpecifier<Ts>().size() + ... + 1)> fmt{0};
     size_t i{0};
@@ -65,7 +75,7 @@ template <class... Ts> constexpr auto Log::createFormatString()
     return fmt;
 }
 
-template <class... Ts> size_t Log::printv(char* buffer, size_t max, Ts&&... args)
+template <class... Ts> size_t printv(char* buffer, size_t max, Ts&&... args)
 {
     constexpr auto fmt{createFormatString<Ts...>()};
     return std::snprintf(buffer, max, fmt.data(), std::forward<Ts>(args)...);

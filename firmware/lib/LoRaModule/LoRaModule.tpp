@@ -1,21 +1,14 @@
 #ifndef __RADIO_T__
 #define __RADIO_T__
 
-#include <Arduino.h>
-#include <LoRaModule.h>
-#include <RadioLib.h>
-#include <algorithm>
-#include <functional>
-#include <logging.h>
-
 template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 {
     // When the transmission of a LoRa message is done an interrupt will be generated on DIO0,
     // this interrupt is used as wakeup source for the esp_light_sleep.
     char macSrcBuffer[MACAddress::stringLength];
     size_t length = message.getLength();
-    Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ", message.getSource().toString(macSrcBuffer), " to ",
-               message.getDest().toString());
+    Log::debug("Sending message of type ", message.getType(), " and length ", length, " from ",
+               message.getSource().toString(macSrcBuffer), " to ", message.getDest().toString());
     this->sendLength = length;
     message.fromData(this->sendBuffer) = std::forward<T>(message);
     if (delay > 0)
@@ -28,7 +21,9 @@ template <class T> void LoRaModule::sendMessage(T&& message, uint32_t delay)
 }
 
 template <MessageType T>
-std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t repeatAttempts, const MACAddress& src, uint32_t listenMs, bool promiscuous)
+std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t repeatAttempts,
+                                                     const MACAddress& src, uint32_t listenMs,
+                                                     bool promiscuous)
 {
     auto source{std::cref(src)};
     if (source.get() == MACAddress::broadcast && this->sendLength != 0)
@@ -58,17 +53,20 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
         if (wakeupCause == ESP_SLEEP_WAKEUP_GPIO || wakeupCause == ESP_SLEEP_WAKEUP_EXT0)
         {
             uint8_t buffer[Message<T>::maxLength]{0};
-            state = this->readData(buffer, std::min(this->getPacketLength(), Message<T>::maxLength));
+            state =
+                this->readData(buffer, std::min(this->getPacketLength(), Message<T>::maxLength));
 
             if (state == RADIOLIB_ERR_CRC_MISMATCH)
             {
                 Log::error("Reading received data (", this->getPacketLength(false),
-                           " bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...");
+                           " bytes) failed because of a CRC mismatch. Waiting for timeout and "
+                           "possible sending of REPEAT...");
                 continue;
             }
             if (state != RADIOLIB_ERR_NONE)
             {
-                Log::error("Reading received data (", this->getPacketLength(false), " bytes) failed, code: ", state);
+                Log::error("Reading received data (", this->getPacketLength(false),
+                           " bytes) failed, code: ", state);
                 return std::nullopt;
             }
             Log::debug("Reading received data (", this->getPacketLength(false), " bytes): success");
@@ -79,14 +77,17 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             if (source.get() != MACAddress::broadcast && source.get() != received.getSource())
             {
                 char macSrcBuffer[MACAddress::stringLength];
-                Log::debug("Message from ", received.getSource().toString(), " discared because it is not the desired source of the message, namely ",
+                Log::debug("Message from ", received.getSource().toString(),
+                           " discared because it is not the desired source of the message, namely ",
                            source.get().toString(macSrcBuffer));
                 continue;
             }
 
-            if ((!promiscuous) && (received.getDest() != this->mac) && (received.getDest() != MACAddress::broadcast))
+            if ((!promiscuous) && (received.getDest() != this->mac) &&
+                (received.getDest() != MACAddress::broadcast))
             {
-                Log::debug("Message from ", received.getSource().toString(), " discarded because its destination does not match this device.");
+                Log::debug("Message from ", received.getSource().toString(),
+                           " discarded because its destination does not match this device.");
                 continue;
             }
             if (received.isType(REPEAT))
@@ -101,7 +102,8 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
             }
             if (!received.isValid())
             {
-                Log::debug("Message of type ", received.getType(), " discarded because message of type ", T, " is desired.");
+                Log::debug("Message of type ", received.getType(),
+                           " discarded because message of type ", T, " is desired.");
                 continue;
             }
 
@@ -109,7 +111,8 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
         }
         else
         {
-            Log::debug("Receive timeout after ", timeoutMs, "ms with ", repeatAttempts, " repeat attempts left.");
+            Log::debug("Receive timeout after ", timeoutMs, "ms with ", repeatAttempts,
+                       " repeat attempts left.");
             if (repeatAttempts == 0)
             {
                 return std::nullopt;
@@ -123,7 +126,8 @@ std::optional<Message<T>> LoRaModule::receiveMessage(uint32_t timeoutMs, size_t 
     return std::nullopt;
 }
 
-template <MessageType T> std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t wakePin)
+template <MessageType T>
+std::optional<Message<T>> LoRaModule::listenMessage(uint32_t timeoutMs, uint8_t wakePin)
 {
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     // When the LoRa module get's a message it will generate an interrupt on DIO0.
@@ -153,12 +157,14 @@ template <MessageType T> std::optional<Message<T>> LoRaModule::listenMessage(uin
         if (state == RADIOLIB_ERR_CRC_MISMATCH)
         {
             Log::error("Reading received data (", this->getPacketLength(false),
-                       " bytes) failed because of a CRC mismatch. Waiting for timeout and possible sending of REPEAT...");
+                       " bytes) failed because of a CRC mismatch. Waiting for timeout and possible "
+                       "sending of REPEAT...");
             return std::nullopt;
         }
         if (state != RADIOLIB_ERR_NONE)
         {
-            Log::error("Reading received data (", this->getPacketLength(false), " bytes) failed, code: ", state);
+            Log::error("Reading received data (", this->getPacketLength(false),
+                       " bytes) failed, code: ", state);
             return std::nullopt;
         }
         Log::debug("Reading received data (", this->getPacketLength(false), " bytes): success");
@@ -168,7 +174,8 @@ template <MessageType T> std::optional<Message<T>> LoRaModule::listenMessage(uin
         Log::debug("Dest: ", received.getDest().toString());
         if (!received.isValid())
         {
-            Log::debug("Message of type ", received.getType(), " discarded because message of type ", T, " is desired.");
+            Log::debug("Message of type ", received.getType(),
+                       " discarded because message of type ", T, " is desired.");
             return std::nullopt;
         }
         return received;

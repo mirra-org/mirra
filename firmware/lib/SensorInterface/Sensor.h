@@ -8,14 +8,15 @@ struct SensorValue
 {
     uint32_t typeTag : 24;
     uint8_t instanceTag;
-    float value{0};
+    float value;
 
     SensorValue() = default;
     /// @brief Constructs a SensorValue from the appropriate tags and value.
     /// @param typeTag Type ID of the sensor.
     /// @param instanceTag Instance ID of the sensor.
     /// @param value Concrete value.
-    SensorValue(uint32_t typeTag, u_int8_t instanceTag, float value) : typeTag{typeTag}, instanceTag{instanceTag}, value{value} {};
+    SensorValue(uint32_t typeTag, u_int8_t instanceTag, float value)
+        : typeTag{typeTag}, instanceTag{instanceTag}, value{value} {};
 } __attribute__((packed));
 
 class Sensor
@@ -32,9 +33,13 @@ public:
     uint8_t getInstanceTag() { return instanceTag; }
     /// @return The sensor's name.
     virtual const char* getName() const { return "Unnamed Sensor"; };
-    /// @brief Updates the sensor's next sample time according to the sensor-specific algorithm. (usually simply addition)
+    /// @brief Updates the sensor's next sample time according to the sensor-specific algorithm.
+    /// (usually simply addition)
     /// @param sampleInterval Sample interval with which to update.
-    virtual void updateNextSampleTime(uint32_t sampleInterval) { this->nextSampleTime += sampleInterval; };
+    virtual void updateNextSampleTime(uint32_t sampleInterval)
+    {
+        this->nextSampleTime += sampleInterval;
+    };
     /// @brief Forcibly sets the nextSampleTime of the sensor.
     void setNextSampleTime(uint32_t nextSampleTime) { this->nextSampleTime = nextSampleTime; };
     /// @return The next sample time in seconds from UNIX epoch.
