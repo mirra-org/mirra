@@ -99,8 +99,7 @@ public:
         ~Iterator() { nvs_release_iterator(nvsIterator); }
         friend class NVS;
     };
-    template <class T> Value<T> getValue(const char* key) & { return Value<T>(key, *this); }
-    template <class T> T getValue(const char* key) && { return Value<T>(key, *this); }
+    template <class T> Value<T> getValue(const char* key) { return Value<T>(key, *this); }
 
     Iterator begin() const { return Iterator(name); };
     Iterator end() const { return Iterator(nullptr); };

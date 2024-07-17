@@ -20,16 +20,19 @@ public:
 private:
     Log() = default;
     Log(const Log&) = delete;
-    Log(Log&&) = default;
+    Log(Log&&) = delete;
     Log& operator=(const Log&) = delete;
-    Log& operator=(Log&&) = default;
+    Log& operator=(Log&&) = delete;
 
-    class File final : public fs::FIFOFile
+    class File final : fs::FIFOFile
     {
         size_t cutTail(size_t cutSize);
 
     public:
         File() : FIFOFile("logs") {}
+        using FIFOFile::getSize;
+        using FIFOFile::push;
+        using FIFOFile::read;
     };
 
     /// @brief Currently loaded logging file.
@@ -76,7 +79,7 @@ public:
     /// @brief Initialises the logging module.
     static void init();
     /// @brief Closes the logging module, releasing the logging file.
-    static void close();
+    static void end();
 
     ~Log() = default;
 };

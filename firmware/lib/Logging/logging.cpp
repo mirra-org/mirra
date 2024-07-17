@@ -22,4 +22,4 @@ size_t Log::File::cutTail(size_t cutSize) {}
 
 void Log::init() { Log::log.file = Log::File(); }
 
-void Log::close() { Log::log.~Log(); }
+void Log::end() { Log::log.~Log(); }

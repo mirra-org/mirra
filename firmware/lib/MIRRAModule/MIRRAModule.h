@@ -2,8 +2,12 @@
 #define __MIRRAMODULE_H__
 
 #include "Commands.h"
+#include "FS.h"
 #include "LoRaModule.h"
 #include "PCF2129_RTC.h"
+
+namespace mirra
+{
 
 /// @brief A base class for MIRRA modules to inherit from, which implements common functionality.
 class MIRRAModule
@@ -24,8 +28,8 @@ public:
         uint8_t rtcIntPin;
         uint8_t rtcAddress;
     };
-    /// @brief Configures the ESP32's pins, starts basic communication primitives (UART, I2C) and mounts the filesystem. Must be called before initialisation of
-    /// the MIRRAModule.
+    /// @brief Configures the ESP32's pins, starts basic communication primitives (UART, I2C) and
+    /// mounts the filesystem. Must be called before initialisation of the MIRRAModule.
     /// @param pins The pin configuration for the MIRRAModule.
     static void prepare(const MIRRAPins& pins);
 
@@ -46,19 +50,23 @@ protected:
 
         static constexpr auto getCommands()
         {
-            return std::tuple_cat(CommonCommands::getCommands(), std::make_tuple(CommandAliasesPair(&Commands::setLogLevel, "setlog", "setloglevel")));
+            return std::tuple_cat(CommonCommands::getCommands(),
+                                  std::make_tuple(CommandAliasesPair(&Commands::setLogLevel,
+                                                                     "setlog", "setloglevel")));
         }
     };
 
-    /// @brief Stores the given sensor data message into the module's flash filesystem. The first type byte of the message is replaced with an 'upload' flag, at
-    /// first set to 0.
-    /// @param m The message to be stored.
-    /// @param dataFile File object opened in append mode.
-    void storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile);
-    /// @brief Prunes the sensor data file if the filesize exceeds the maxSize argument, otherwise does nothing.
-    /// @param dataFile The file object to be pruned, opened in a read mode at the start of the file.
-    /// @param maxSize The max file size in bytes.
-    void pruneSensorData(File&& dataFile, uint32_t maxSize);
+    class SensorFile final : fs::FIFOFile
+    {
+        size_t cutTail(size_t cutSize);
+
+    public:
+        SensorFile() : FIFOFile("data") {}
+        using FIFOFile::getSize;
+        void push(const Message<SENSOR_DATA>& message);
+
+        using FIFOFile::read;
+    };
 
     /// @brief Enters deep sleep for the specified time.
     /// @param sleepTime The time in seconds to sleep.
@@ -73,7 +81,8 @@ protected:
     /// @param untilTime The time (UNIX epoch, seconds) the module should wake.
     void lightSleepUntil(uint32_t untilTime);
 
-    /// @brief Gracefully shuts down the dependencies. This function can be thought of as a counterpoint to MIRRAModule::prepare.
+    /// @brief Gracefully shuts down the dependencies. This function can be thought of as a
+    /// counterpoint to MIRRAModule::prepare.
     /// @see MIRRAModule::prepare
     void end();
 
@@ -86,5 +95,5 @@ protected:
 
     CommandEntry commandEntry;
 };
-
+};
 #endif

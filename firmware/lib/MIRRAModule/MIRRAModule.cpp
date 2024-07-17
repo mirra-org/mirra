@@ -1,11 +1,10 @@
-#include <MIRRAModule.h>
+#include "MIRRAModule.h"
 
 #include "logging.h"
 #include <Arduino.h>
-#include <LittleFS.h>
 #include <Wire.h>
 
-RTC_DATA_ATTR Log::Level level = Log::Level::INFO;
+using namespace mirra;
 
 void MIRRAModule::prepare(const MIRRAPins& pins)
 {
@@ -17,20 +16,14 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
     Wire.begin(pins.sdaPin, pins.sclPin); // i2c
     pinMode(pins.bootPin, INPUT);
     Serial.println("I2C wire initialised.");
-    if (!LittleFS.begin())
-    {
-        Serial.println("Mounting LittleFS failed! Formatting and restarting ...");
-        LittleFS.format();
-        ESP.restart();
-    }
-    Serial.println("LittleFS initialsed.");
+    fs::NVS::init();
+    Serial.println("NVS initialsed.");
 }
 
 void MIRRAModule::end()
 {
-    Log::log.close();
+    Log::end();
     lora.sleep();
-    LittleFS.end();
     Wire.end();
     Serial.flush();
     Serial.end();
@@ -39,59 +32,33 @@ void MIRRAModule::end()
     gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin}, commandEntry{pins.bootPin, true}
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
+      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
+      commandEntry{pins.bootPin, true}
 {
-    Log::log.setSerial(&Serial);
-    Log::log.setLogfile(true);
-    Log::log.setLogLevel(level);
+    Log::log.serial = &Serial;
+    Log::log.fileEnabled = true;
+    Log::log.level =
+        fs::NVS("global").getValue<Log::Level>("loglevel").getOrCreate(Log::Level::INFO);
+    Log::init();
     Serial.println("Logger initialised.");
     Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
-    Log::info("Used ", LittleFS.usedBytes() / 1000, "KB of ", LittleFS.totalBytes() / 1000, "KB available on flash.");
 }
 
-void MIRRAModule::storeSensorData(const Message<SENSOR_DATA>& m, File& dataFile)
+size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
 {
-    dataFile.write(static_cast<uint8_t>(m.getLength()));
-    dataFile.write(0); // mark not uploaded (yet)
-    dataFile.write(&m.toData()[1], m.getLength() - 1);
-}
-
-void MIRRAModule::pruneSensorData(File&& dataFile, uint32_t maxSize)
-{
-    size_t fileSize = dataFile.size();
-    if (fileSize <= maxSize)
-        return;
-
-    char fileName[strlen(dataFile.name()) + 2];
-    snprintf(fileName, strlen(dataFile.name()) + 2, "/%s", dataFile.name());
-    char tempFileName[strlen(fileName) - strlen(strrchr(fileName, '.')) + 4 + 1];
-    strcpy(tempFileName, fileName);
-    strcpy(strrchr(tempFileName, '.'), ".tmp");
-    File dataFileTemp{LittleFS.open(tempFileName, "w", true)};
-
-    while (dataFile.available())
+    size_t removed{0};
+    while (removed < cutSize)
     {
-        uint8_t messageLength = sizeof(messageLength) + dataFile.peek();
-        if (fileSize > maxSize)
-        {
-            fileSize -= messageLength;
-            dataFile.seek(messageLength, SeekCur); // skip over the next message
-        }
-        else
-        {
-            uint8_t buffer[messageLength];
-            dataFile.read(buffer, messageLength);
-            dataFileTemp.write(buffer, messageLength);
-        }
+        removed += sizeof(MACAddress) + sizeof(Message<SENSOR_DATA>::flags) +
+                   sizeof(Message<SENSOR_DATA>::time) +
+                   (read<Message<SENSOR_DATA>::Flags>(removed + sizeof(MACAddress)).nValues *
+                    sizeof(SensorValue));
     }
-    dataFile.close();
-    LittleFS.remove(fileName);
-    dataFileTemp.flush();
-    Log::info("Sensor data pruned from ", fileSize / 1000, " KB to ", dataFileTemp.size() / 1000, " KB.");
-    dataFileTemp.close();
-
-    LittleFS.rename(tempFileName, fileName);
+    return removed;
 }
+
+void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message) { FIFOFile::push(message); }
 
 void MIRRAModule::deepSleep(uint32_t sleepTime)
 {
@@ -102,8 +69,8 @@ void MIRRAModule::deepSleep(uint32_t sleepTime)
     }
 
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
-    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than 30s the internal oscillator will be used to wake from deep
-    // sleep
+    // The external RTC only has a alarm resolution of 1s, to be more accurate for times lower than
+    // 30s the internal oscillator will be used to wake from deep sleep
     if (sleepTime <= 30)
     {
         Log::debug("Using internal timer for deep sleep.");
@@ -116,7 +83,8 @@ void MIRRAModule::deepSleep(uint32_t sleepTime)
         rtc.enableAlarm();
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
-    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.bootPin), ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
+    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.bootPin),
+                                 ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     Log::info("Good night.");
     this->end();
     esp_deep_sleep_start();
@@ -163,16 +131,16 @@ void MIRRAModule::lightSleepUntil(uint32_t untilTime)
 CommandCode MIRRAModule::Commands::setLogLevel(const char* arg)
 {
     if (strcmp("DEBUG", arg) == 0)
-        level = Log::Level::DEBUG;
+        Log::log.level = Log::Level::DEBUG;
     else if (strcmp("INFO", arg) == 0)
-        level = Log::Level::INFO;
+        Log::log.level = Log::Level::INFO;
     else if (strcmp("ERROR", arg) == 0)
-        level = Log::Level::ERROR;
+        Log::log.level = Log::Level::ERROR;
     else
     {
         Serial.printf("Argument '%s' is not a valid log level.\n", arg);
         return COMMAND_ERROR;
     }
-    Log::log.setLogLevel(level);
+    fs::NVS("global").getValue<Log::Level>("loglevel") = Log::log.level;
     return COMMAND_SUCCESS;
 }
