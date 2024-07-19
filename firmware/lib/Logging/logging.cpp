@@ -22,7 +22,7 @@ size_t Log::File::cutTail(size_t cutSize)
             break;
         }
     }
-    return cutSize;
+    return FIFOFile::cutTail(cutSize);
 }
 
 void Log::init() { Log::log.file = Log::File(); }

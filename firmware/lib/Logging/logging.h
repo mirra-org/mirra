@@ -23,20 +23,7 @@ private:
     Log(Log&&) = delete;
     Log& operator=(const Log&) = delete;
     Log& operator=(Log&&) = delete;
-
-    class File final : fs::FIFOFile
-    {
-        size_t cutTail(size_t cutSize);
-
-    public:
-        File() : FIFOFile("logs") {}
-        using FIFOFile::getSize;
-        using FIFOFile::push;
-        using FIFOFile::read;
-    };
-
-    /// @brief Currently loaded logging file.
-    File file;
+    ~Log() = default;
 
     /// @brief Buffer in which the final string is constructed and printed from.
     char buffer[256]{0};
@@ -53,12 +40,25 @@ private:
     template <Log::Level level, class... Ts> void print(Ts&&... args);
 
 public:
+    class File final : fs::FIFOFile
+    {
+        size_t cutTail(size_t cutSize);
+
+    public:
+        File() : FIFOFile("logs"), level{nvs.getValue("level", Level::INFO)} {}
+        /// @brief Logging level of the logging module. Messages below this level will not be
+        /// stored or printed.
+        fs::NVS::Value<Level> level;
+        using FIFOFile::getMaxSize;
+        using FIFOFile::getSize;
+        using FIFOFile::push;
+        using FIFOFile::read;
+    };
+
+    /// @brief Currently loaded logging file.
+    File file;
     /// @brief Serial to print to.
     HardwareSerial* serial{nullptr};
-    /// @brief Logging level of the logging module. Messages below this level will not be printed.
-    Level level{Level::INFO};
-    /// @brief Whether logging to file is enabled.
-    bool fileEnabled{false};
 
     /// @brief Singleton global log object
     static Log log;
@@ -70,8 +70,6 @@ public:
     static void init();
     /// @brief Closes the logging module, releasing the logging file.
     static void end();
-
-    ~Log() = default;
 };
 
 /// @return A format specifier string matched to the type argument.

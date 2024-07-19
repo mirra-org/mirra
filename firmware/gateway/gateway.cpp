@@ -354,7 +354,7 @@ void Gateway::uploadPeriod()
         size_t messagesPublished{0};
         while (true)
         {
-            auto entry = file.getFirstUnuploaded();
+            auto entry = file.getUnuploaded(0);
             if (!entry)
                 break; // no more unuploaded entries remaining
             char topic[topicSize];

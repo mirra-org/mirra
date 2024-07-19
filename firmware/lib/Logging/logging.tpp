@@ -82,7 +82,7 @@ template <class... Ts> size_t printv(char* buffer, size_t max, Ts&&... args)
 }
 template <Log::Level level, class... Ts> void Log::print(Ts&&... args)
 {
-    if (level < this->level)
+    if (level < this->file.level)
         return;
     time_t ctime{time(nullptr)};
     tm* time{gmtime(&ctime)};
@@ -90,8 +90,7 @@ template <Log::Level level, class... Ts> void Log::print(Ts&&... args)
     size += printv(&buffer[size], sizeof(buffer) - size, std::forward<Ts>(args)...);
     buffer[size] = '\n';
     size++;
-    if (fileEnabled)
-        file.push(buffer, size);
+    file.push(buffer, size);
     if (serial != nullptr)
         serial->write(buffer, size);
 }

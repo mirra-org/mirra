@@ -58,8 +58,9 @@ protected:
 
     class SensorFile final : fs::FIFOFile
     {
+        fs::NVS::Value<size_t> reader;
+
         size_t cutTail(size_t cutSize);
-        size_t reader;
 
     public:
         struct DataEntry
@@ -81,15 +82,20 @@ protected:
         } __attribute__((packed));
 
         SensorFile();
-        ~SensorFile();
         using FIFOFile::getSize;
         void push(const Message<SENSOR_DATA>& message);
-        void push(const MACAddress& source, uint32_t time, uint8_t nValues,
-                  const std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values);
+        void push(const DataEntry& entry) { push(entry); }
+        /* void push(const MACAddress& source, uint32_t time, uint8_t nValues,
+                  const std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values); */
 
-        std::optional<DataEntry> getFirstUnuploaded();
+        std::optional<size_t> getUnuploadedAddress(size_t index);
+        std::optional<DataEntry> getUnuploaded(size_t index);
+        bool isLast(size_t index);
+
         void setUploaded();
         using FIFOFile::read;
+
+        void flush();
     };
 
     /// @brief Enters deep sleep for the specified time.

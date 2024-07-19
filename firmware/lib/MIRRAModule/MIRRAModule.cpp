@@ -37,24 +37,19 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
       commandEntry{pins.bootPin, true}
 {
     Log::log.serial = &Serial;
-    Log::log.fileEnabled = true;
-    Log::log.level =
-        fs::NVS("global").getValue<Log::Level>("loglevel").getOrCreate(Log::Level::INFO);
     Log::init();
     Serial.println("Logger initialised.");
     Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
 }
 
-MIRRAModule::SensorFile::SensorFile() : FIFOFile("data")
+MIRRAModule::SensorFile::SensorFile() : FIFOFile("data"), reader{nvs.getValue<size_t>("reader", 0)}
 {
-    fs::NVS nvs{getName()};
-    reader = nvs.getValue<size_t>("reader").getOrCreate(0);
 }
 
-MIRRAModule::SensorFile::~SensorFile()
+void MIRRAModule::SensorFile::flush()
 {
-    fs::NVS nvs{getName()};
-    nvs.getValue<size_t>("reader") = reader;
+    reader.commit();
+    FIFOFile::flush();
 }
 
 size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
@@ -66,21 +61,39 @@ size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
             DataEntry::getSize(read<Message<SENSOR_DATA>::Flags>(removed + sizeof(MACAddress)));
     }
     reader = reader < removed ? 0 : reader - removed;
-    return removed;
+    return FIFOFile::cutTail(removed);
 }
 
-std::optional<MIRRAModule::SensorFile::DataEntry> MIRRAModule::SensorFile::getFirstUnuploaded()
+std::optional<size_t> MIRRAModule::SensorFile::getUnuploadedAddress(size_t index)
 {
+    size_t address = reader;
+    size_t count{0};
     while (true)
     {
-        if (reader == getSize())
+        if (address == getSize())
             return std::nullopt;
-        DataEntry::Flags flags = read<DataEntry::Flags>(reader + sizeof(MACAddress));
+        DataEntry::Flags flags = read<DataEntry::Flags>(address + sizeof(MACAddress));
+        address += DataEntry::getSize(flags);
         if (!flags.uploaded)
-            return read<DataEntry>(reader);
-        reader += DataEntry::getSize(flags);
+        {
+            if (count == 0)
+                reader = address;
+            if (count == index)
+                return address;
+            count++;
+        }
     }
 }
+
+std::optional<MIRRAModule::SensorFile::DataEntry>
+MIRRAModule::SensorFile::getUnuploaded(size_t index)
+{
+    auto address = getUnuploadedAddress(index);
+    if (!address)
+        return std::nullopt;
+    return read<DataEntry>(*address);
+}
+bool MIRRAModule::SensorFile::isLast(size_t index) { return !getUnuploadedAddress(index + 1); }
 
 void MIRRAModule::SensorFile::setUploaded()
 {
@@ -165,16 +178,15 @@ void MIRRAModule::lightSleepUntil(uint32_t untilTime)
 CommandCode MIRRAModule::Commands::setLogLevel(const char* arg)
 {
     if (strcmp("DEBUG", arg) == 0)
-        Log::log.level = Log::Level::DEBUG;
+        Log::log.file.level = Log::Level::DEBUG;
     else if (strcmp("INFO", arg) == 0)
-        Log::log.level = Log::Level::INFO;
+        Log::log.file.level = Log::Level::INFO;
     else if (strcmp("ERROR", arg) == 0)
-        Log::log.level = Log::Level::ERROR;
+        Log::log.file.level = Log::Level::ERROR;
     else
     {
         Serial.printf("Argument '%s' is not a valid log level.\n", arg);
         return COMMAND_ERROR;
     }
-    fs::NVS("global").getValue<Log::Level>("loglevel") = Log::log.level;
     return COMMAND_SUCCESS;
 }

@@ -13,9 +13,11 @@ NVS::NVS(const char* name)
 
 NVS::~NVS()
 {
-    nvs_commit(handle);
+    commit();
     nvs_close(handle);
 }
+
+void NVS::commit() { nvs_commit(handle); }
 uint8_t NVS::get_u8(const char* key) const
 {
     uint8_t value{0};
@@ -200,7 +202,7 @@ void NVS::init()
 Partition::Partition(const char* name)
     : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED,
                                     name)},
-      sectorBuffer{new std::array<uint8_t, sectorSize>}
+      sectorBuffer{new std::array<uint8_t, sectorSize>}, maxSize{part->size}
 {
     strncpy(this->name, name, partitionNameMaxSize);
 }
@@ -230,7 +232,6 @@ void Partition::readSector(size_t sectorAddress)
     if (err != ESP_OK)
         ; // log error
     this->sectorAddress = sectorAddress;
-    sectorDirty = false;
 }
 
 void Partition::writeSector()
@@ -241,6 +242,7 @@ void Partition::writeSector()
     esp_partition_write(part, sectorAddress, sectorBuffer.get(), sectorSize);
     if (err != ESP_OK)
         ; // log error
+    sectorDirty = false;
 }
 
 void Partition::read(size_t address, void* buffer, size_t size) const
@@ -257,9 +259,9 @@ void Partition::read(size_t address, void* buffer, size_t size) const
     // else (or if not all requested data in sector buffer), read straight from flash
     while (size > 0)
     {
-        size_t toRead = std::min(part->size - address, size);
+        size_t toRead = std::min(maxSize - address, size);
         esp_partition_read(part, address, buffer, size);
-        address = (address + toRead) % part->size;
+        address = (address + toRead) % getMaxSize();
         buffer = static_cast<uint8_t*>(buffer) + toRead;
         size -= toRead;
     }
@@ -274,7 +276,7 @@ void Partition::write(size_t address, const void* buffer, size_t size)
 
         size_t toWrite = std::min(sectorSize - (address - sectorAddress), size);
         std::memcpy(&sectorBuffer.get()[address - sectorAddress], buffer, toWrite);
-        address = (address + toWrite) % part->size;
+        address = (address + toWrite) % getMaxSize();
         buffer = static_cast<const uint8_t*>(buffer) + toWrite;
         size -= toWrite;
         sectorDirty = true;
@@ -289,48 +291,47 @@ void Partition::flush()
     }
 }
 
-FIFOFile::FIFOFile(const char* name) : Partition(name)
+FIFOFile::FIFOFile(const char* name)
+    : Partition(name), nvs{getName()}, head{nvs.getValue<size_t>("head", 0)},
+      tail{nvs.getValue<size_t>("tail", 0)}, size{nvs.getValue<size_t>("size", 0)}
 {
-    NVS nvs{getName()};
-    head = nvs.getValue<size_t>("head").getOrCreate(0);
-    tail = nvs.getValue<size_t>("tail").getOrCreate(0);
-    size = nvs.getValue<size_t>("size").getOrCreate(0);
     loadFirstSector(head);
 }
 
-FIFOFile::~FIFOFile()
-{
-    NVS nvs{getName()};
-    nvs.getValue<size_t>("head") = head;
-    nvs.getValue<size_t>("tail") = tail;
-    nvs.getValue<size_t>("size") = size;
-}
-
-size_t FIFOFile::freeSpace() const { return part->size - size; }
+size_t FIFOFile::freeSpace() const { return getMaxSize() - size; }
 
 void FIFOFile::read(size_t address, void* buffer, size_t size) const
 {
     if (address >= this->size)
         return;
-    Partition::read((tail + address) % part->size, buffer, std::min(size, this->size - address));
+    Partition::read((tail + address) % getMaxSize(), buffer, std::min(size, this->size - address));
 }
 
 void FIFOFile::push(const void* buffer, size_t size)
 {
     this->size = (this->size + size) - (freeSpace() < size ? cutTail(size - freeSpace()) : 0);
     Partition::write(head, buffer, size);
-    head = (head + size) % part->size;
+    head = (head + size) % getMaxSize();
 }
 
 void FIFOFile::write(size_t address, const void* buffer, size_t size)
 {
     if (address >= this->size)
         return;
-    Partition::write((tail + address) % part->size, buffer, std::min(size, this->size - address));
+    Partition::write((tail + address) % getMaxSize(), buffer, std::min(size, this->size - address));
 }
 
 size_t FIFOFile::cutTail(size_t cutSize)
 {
-    tail = (tail + cutSize) % part->size;
+    tail = (tail + cutSize) % getMaxSize();
     return cutSize;
+}
+
+void FIFOFile::flush()
+{
+    head.commit();
+    tail.commit();
+    size.commit();
+    nvs.commit();
+    Partition::flush();
 }

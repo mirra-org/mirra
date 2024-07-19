@@ -50,29 +50,32 @@ public:
     NVS(const char* name);
     ~NVS();
 
+    void commit();
+
     template <class T> class Value
     {
         const char* key;
-        NVS& nvs;
+        NVS* nvs;
+        T cachedValue;
 
-        Value(const char* key, NVS& nvs) : key{key}, nvs{nvs} {}
-        Value(const Value& other) = delete;
-        Value(Value&&) = delete;
+        Value(const char* key, NVS* nvs) : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key)} {}
+        Value(const char* key, NVS* nvs, const T& defaultValue)
+            : key{key}, nvs{nvs}, cachedValue{exists() ? nvs->get<T>(key) : defaultValue}
+        {
+        }
 
     public:
-        bool exists() const { return nvs.exists(key); }
-        T getOrCreate(const T& value) { return exists() ? *this : *this = value; }
-        const T& operator=(const T& other)
-        {
-            nvs.set(key, other);
-            return other;
-        }
-        const T& operator=(T&& other)
-        {
-            nvs.set(key, std::move(other));
-            return other;
-        }
-        operator T() const { return nvs.get<T>(key); }
+        Value(const Value&) = delete;
+        Value(Value&&) = default;
+        Value& operator=(Value&&) = default;
+        ~Value() { commit(); }
+
+        bool exists() const { return nvs->exists(key); }
+        void commit() { nvs->set(key, cachedValue); }
+        T& operator=(const T& other) { return cachedValue = other; }
+        T& operator=(T&& other) { return cachedValue = std::move(other); }
+        operator T() const { return cachedValue; }
+        operator T&() { return cachedValue; }
         friend class NVS;
     };
 
@@ -99,7 +102,11 @@ public:
         ~Iterator() { nvs_release_iterator(nvsIterator); }
         friend class NVS;
     };
-    template <class T> Value<T> getValue(const char* key) { return Value<T>(key, *this); }
+    template <class T> Value<T> getValue(const char* key) { return Value<T>(key, this); }
+    template <class T> Value<T> getValue(const char* key, const T& defaultValue)
+    {
+        return Value<T>(key, this, defaultValue);
+    }
 
     Iterator begin() const { return Iterator(name); };
     Iterator end() const { return Iterator(nullptr); };
@@ -114,6 +121,7 @@ class Partition
     static constexpr size_t toSectorAddress(size_t address);
 
     char* name;
+    size_t maxSize;
     std::unique_ptr<std::array<uint8_t, sectorSize>> sectorBuffer;
     size_t sectorAddress;
     bool sectorDirty;
@@ -134,6 +142,8 @@ public:
     Partition& operator=(Partition&&) = default;
     ~Partition();
 
+    size_t getMaxSize() const { return maxSize; };
+
     const char* getName() { return name; };
     void read(size_t address, void* buffer, size_t size) const;
     template <class T> T read(size_t address) const;
@@ -143,25 +153,28 @@ public:
 
     void flush();
 };
-class FIFOFile : Partition
+class FIFOFile : protected Partition
 {
+protected:
+    NVS nvs;
+
 private:
+    NVS::Value<size_t> head;
+    NVS::Value<size_t> size;
+    NVS::Value<size_t> tail;
+
+protected:
+    FIFOFile(const char* name);
     /// @brief Cuts the beginning of the tail to free up space: how this cutting is implemented
     /// may be overriden.
     /// @param cutSize Minimal required size of cut in bytes.
     /// @return Total amount of bytes cut.
     virtual size_t cutTail(size_t cutSize);
-    size_t head;
-    size_t size;
-
-protected:
-    FIFOFile(const char* name);
-    size_t tail;
 
 public:
     FIFOFile(FIFOFile&&) = default;
     FIFOFile& operator=(FIFOFile&&) = default;
-    virtual ~FIFOFile();
+    virtual ~FIFOFile(){};
 
     size_t getSize() const { return size; }
     size_t freeSpace() const;
@@ -177,7 +190,7 @@ public:
     void write(size_t address, const void* buffer, size_t size);
     template <class T> void write(size_t address, const T& value);
 
-    using Partition::flush;
+    void flush();
 };
 
 #include "./FS.tpp"
