@@ -200,10 +200,9 @@ void SensorNode::samplePeriod()
     uint32_t cTime{(*std::min_element(sensors.begin(), std::next(sensors.begin(), nSensors),
                                       lambdaByNextSampleTime))
                        ->getNextSampleTime()};
-    Message<SENSOR_DATA> message{sampleScheduled(cTime)};
-    Log::debug("Constructed Sensor Message with length ", message.getLength());
+    SensorFile::DataEntry entry{sampleScheduled(cTime)};
     SensorFile file;
-    file.push(message);
+    file.push(entry);
     updateSensorsSampleTimes(cTime);
     clearSensors();
 }
