@@ -18,11 +18,11 @@ public:
     };
 
 private:
-    Log() = default;
+    Log(){};
     Log(const Log&) = delete;
-    Log(Log&&) = delete;
+    Log(Log&&) = default;
     Log& operator=(const Log&) = delete;
-    Log& operator=(Log&&) = delete;
+    Log& operator=(Log&&) = default;
     ~Log() = default;
 
     /// @brief Buffer in which the final string is constructed and printed from.
