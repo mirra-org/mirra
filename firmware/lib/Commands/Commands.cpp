@@ -56,12 +56,12 @@ CommandCode CommonCommands::printLogs()
     static constexpr size_t bufferSize{256};
     char buffer[bufferSize];
     size_t cursor{0};
-    Serial.printf("Logs: %u out of %u KB.\n", Log::log.file.getSize() / 1024,
-                  Log::log.file.getMaxSize() / 1024);
-    while (cursor < Log::log.file.getSize())
+    const Log::File& file = Log::getInstance().file;
+    Serial.printf("Logs: %u out of %u KB.\n", file.getSize() / 1024, file.getMaxSize() / 1024);
+    while (cursor < file.getSize())
     {
-        Log::log.file.read(cursor, buffer, bufferSize);
-        Serial.write(buffer, std::min(bufferSize, Log::log.file.getSize() - cursor));
+        file.read(cursor, buffer, bufferSize);
+        Serial.write(buffer, std::min(bufferSize, file.getSize() - cursor));
         cursor += bufferSize;
     }
     Serial.print('\n');

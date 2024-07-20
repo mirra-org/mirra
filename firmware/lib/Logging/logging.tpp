@@ -109,7 +109,7 @@ template <class... Ts> size_t printv(char* buffer, size_t max, Ts&&... args)
 }
 template <Log::Level level, class... Ts> void Log::print(Ts&&... args)
 {
-    if (level < this->file.level)
+    if (level < file.level)
         return;
     time_t ctime{time(nullptr)};
     tm* time{gmtime(&ctime)};

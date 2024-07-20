@@ -11,6 +11,7 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
+    Serial.flush();
     gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
     pinMode(pins.peripheralPowerPin, OUTPUT);
     digitalWrite(pins.peripheralPowerPin, HIGH);
@@ -24,7 +25,6 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 void MIRRAModule::end()
 {
     fs::NVS::deinit();
-    Log::end();
     lora.sleep();
     Wire.end();
     Serial.flush();
@@ -38,8 +38,7 @@ MIRRAModule::MIRRAModule(const MIRRAPins& pins)
       lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
       commandEntry{pins.bootPin, true}
 {
-    Log::log.serial = &Serial;
-    Log::init();
+    Log::getInstance().serial = &Serial;
     Serial.println("Logger initialised.");
     Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
 }
@@ -189,11 +188,11 @@ void MIRRAModule::lightSleepUntil(uint32_t untilTime)
 CommandCode MIRRAModule::Commands::setLogLevel(const char* arg)
 {
     if (strcmp("DEBUG", arg) == 0)
-        Log::log.file.level = Log::Level::DEBUG;
+        Log::getInstance().file.level = Log::Level::DEBUG;
     else if (strcmp("INFO", arg) == 0)
-        Log::log.file.level = Log::Level::INFO;
+        Log::getInstance().file.level = Log::Level::INFO;
     else if (strcmp("ERROR", arg) == 0)
-        Log::log.file.level = Log::Level::ERROR;
+        Log::getInstance().file.level = Log::Level::ERROR;
     else
     {
         Serial.printf("Argument '%s' is not a valid log level.\n", arg);

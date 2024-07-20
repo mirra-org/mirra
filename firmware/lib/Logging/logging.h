@@ -20,9 +20,9 @@ public:
 private:
     Log(){};
     Log(const Log&) = delete;
-    Log(Log&&) = default;
+    Log(Log&&) = delete;
     Log& operator=(const Log&) = delete;
-    Log& operator=(Log&&) = default;
+    Log& operator=(Log&&) = delete;
     ~Log() = default;
 
     /// @brief Buffer in which the final string is constructed and printed from.
@@ -57,20 +57,24 @@ public:
     };
 
     /// @brief Currently loaded logging file.
-    File file;
+    File file{};
     /// @brief Serial to print to.
     HardwareSerial* serial{nullptr};
 
     /// @brief Singleton global log object
-    static Log log;
-    template <class... Ts> static void debug(Ts... args) { log.print<Level::DEBUG>(args...); }
-    template <class... Ts> static void info(Ts... args) { log.print<Level::INFO>(args...); }
-    template <class... Ts> static void error(Ts... args) { log.print<Level::ERROR>(args...); }
-
-    /// @brief Initialises the logging module.
-    static void init();
-    /// @brief Closes the logging module, releasing the logging file.
-    static void end();
+    static Log& getInstance();
+    template <class... Ts> static void debug(Ts... args)
+    {
+        getInstance().print<Level::DEBUG>(args...);
+    }
+    template <class... Ts> static void info(Ts... args)
+    {
+        getInstance().print<Level::INFO>(args...);
+    }
+    template <class... Ts> static void error(Ts... args)
+    {
+        getInstance().print<Level::ERROR>(args...);
+    }
 };
 
 /// @return A format specifier string matched to the type argument.

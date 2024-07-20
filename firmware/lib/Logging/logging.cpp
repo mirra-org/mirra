@@ -2,7 +2,11 @@
 
 using namespace mirra;
 
-Log Log::log{};
+Log& Log::getInstance()
+{
+    static Log log{};
+    return log;
+}
 
 size_t Log::File::cutTail(size_t cutSize)
 {
@@ -23,14 +27,4 @@ size_t Log::File::cutTail(size_t cutSize)
         }
     }
     return FIFOFile::cutTail(cutSize);
-}
-
-void Log::init()
-{
-    Log::log.file = Log::File();
-}
-
-void Log::end()
-{
-    Log::log.~Log();
 }
