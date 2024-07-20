@@ -202,7 +202,7 @@ void SensorNode::samplePeriod()
                                       lambdaByNextSampleTime))
                        ->getNextSampleTime()};
     SensorFile::DataEntry entry{sampleScheduled(cTime)};
-    SensorFile file;
+    SensorFile file{};
     file.push(entry);
     updateSensorsSampleTimes(cTime);
     clearSensors();
@@ -223,7 +223,7 @@ void SensorNode::commPeriod()
     Log::info("Communicating with gateway ", _gatewayMAC.toString(), " ...");
     size_t _maxMessages{maxMessages}; // avoid access to slow RTC memory
     Log::debug("Max messages to send: ", _maxMessages);
-    SensorFile file;
+    SensorFile file{};
     bool firstMessage{true};
     for (size_t i{0}; i < _maxMessages; i++)
     {

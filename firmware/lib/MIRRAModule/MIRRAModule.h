@@ -94,6 +94,7 @@ protected:
 
         SensorFile();
 
+        using FIFOFile::getMaxSize;
         using FIFOFile::getSize;
 
         using FIFOFile::read;

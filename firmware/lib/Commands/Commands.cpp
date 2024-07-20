@@ -56,7 +56,8 @@ CommandCode CommonCommands::printLogs()
     static constexpr size_t bufferSize{256};
     char buffer[bufferSize];
     size_t cursor{0};
-    Serial.printf("Logs: %u out of %u KB.\n", Log::log.file.getSize(), Log::log.file.getMaxSize());
+    Serial.printf("Logs: %u out of %u KB.\n", Log::log.file.getSize() / 1024,
+                  Log::log.file.getMaxSize() / 1024);
     while (cursor < Log::log.file.getSize())
     {
         Log::log.file.read(cursor, buffer, bufferSize);

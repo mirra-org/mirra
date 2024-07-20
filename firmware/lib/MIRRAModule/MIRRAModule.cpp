@@ -33,8 +33,8 @@ void MIRRAModule::end()
     gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin,
-                                                             pins.rxPin, pins.txPin},
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
+      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
       commandEntry{pins.bootPin, true}
 {
     Log::log.serial = &Serial;
@@ -203,7 +203,8 @@ CommandCode MIRRAModule::Commands::setLogLevel(const char* arg)
 
 CommandCode MIRRAModule::Commands::printData()
 {
-    SensorFile file;
+    SensorFile file{};
+    Serial.printf("Data: %u out of %u KB.\n", file.getSize() / 1024, file.getMaxSize() / 1024);
     for (SensorFile::DataEntry entry : file)
     {
         Serial.printf("%s ", entry.source.toString());
@@ -231,7 +232,7 @@ CommandCode MIRRAModule::Commands::printData()
 
 CommandCode MIRRAModule::Commands::printDataRaw()
 {
-    SensorFile file;
+    SensorFile file{};
     for (SensorFile::DataEntry entry : file)
     {
         for (size_t i = 0; i < entry.getSize(); i++)
