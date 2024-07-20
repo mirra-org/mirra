@@ -111,6 +111,7 @@ public:
     Iterator end() const { return Iterator(nullptr); };
 
     static void init();
+    static void deinit();
 };
 
 class Partition
