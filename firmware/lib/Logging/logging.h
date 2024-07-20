@@ -51,8 +51,9 @@ public:
         fs::NVS::Value<Level> level;
         using FIFOFile::getMaxSize;
         using FIFOFile::getSize;
-        using FIFOFile::push;
         using FIFOFile::read;
+
+        using FIFOFile::push;
     };
 
     /// @brief Currently loaded logging file.
