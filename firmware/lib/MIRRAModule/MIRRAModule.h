@@ -73,8 +73,8 @@ protected:
             using SensorValueArray = Message<SENSOR_DATA>::SensorValueArray;
 
             MACAddress source;
-            Flags flags;
             uint32_t time;
+            Flags flags;
             SensorValueArray values;
 
             static constexpr size_t getSize(Flags flags)

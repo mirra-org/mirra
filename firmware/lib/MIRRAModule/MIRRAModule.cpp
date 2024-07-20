@@ -103,8 +103,8 @@ void MIRRAModule::SensorFile::setUploaded()
 
 void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
 {
-    FIFOFile::push(DataEntry{message.getSource(), DataEntry::Flags{message.nValues, false},
-                             message.time, message.values});
+    FIFOFile::push(DataEntry{message.getSource(), message.time,
+                             DataEntry::Flags{message.nValues, false}, message.values});
 }
 
 void MIRRAModule::deepSleep(uint32_t sleepTime)

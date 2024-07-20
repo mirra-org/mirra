@@ -157,8 +157,8 @@ SensorNode::SensorFile::DataEntry SensorNode::sampleAll()
         values[i] = sensors[i]->getMeasurement();
     }
     return SensorFile::DataEntry{
-        lora.getMACAddress(), SensorFile::DataEntry::Flags{static_cast<uint8_t>(nSensors), false},
-        0, values};
+        lora.getMACAddress(), 0,
+        SensorFile::DataEntry::Flags{static_cast<uint8_t>(nSensors), false}, values};
 }
 
 SensorNode::SensorFile::DataEntry SensorNode::sampleScheduled(uint32_t cTime)
@@ -179,8 +179,8 @@ SensorNode::SensorFile::DataEntry SensorNode::sampleScheduled(uint32_t cTime)
             nValues++;
         }
     }
-    return SensorFile::DataEntry{lora.getMACAddress(), SensorFile::DataEntry::Flags{nValues, false},
-                                 cTime, values};
+    return SensorFile::DataEntry{lora.getMACAddress(), cTime,
+                                 SensorFile::DataEntry::Flags{nValues, false}, values};
 }
 
 void SensorNode::updateSensorsSampleTimes(uint32_t cTime)

@@ -165,14 +165,14 @@ public:
 template <> class Message<SENSOR_DATA> : public MessageHeader
 {
 public:
-    /// @brief The amount of values held in the messages' values array.
-    uint8_t nValues;
-
     /// @brief The timestamp associated with the held values (UNIX epoch, seconds).
     uint32_t time;
 
+    /// @brief The amount of values held in the messages' values array.
+    uint8_t nValues;
+
     /// @brief The maximum amount of sensor values that can be held in a single sensor data message.
-    static const size_t maxNValues =
+    static constexpr size_t maxNValues =
         (maxLength - headerLength - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue);
 
     struct SensorValueArray : public std::array<SensorValue, Message<SENSOR_DATA>::maxNValues>
