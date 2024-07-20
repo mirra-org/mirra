@@ -8,16 +8,12 @@ size_t Log::File::cutTail(size_t cutSize)
 {
     static constexpr size_t searchSize{128};
     uint8_t searchBuffer[searchSize];
-    while (true)
-    {
+    while (true) {
         read(cutSize, &searchBuffer, searchSize);
         uint8_t* found = reinterpret_cast<uint8_t*>(std::memchr(searchBuffer, '\n', searchSize));
-        if (found == nullptr)
-        {
+        if (found == nullptr) {
             cutSize += searchSize;
-        }
-        else
-        {
+        } else {
             cutSize += std::distance(searchBuffer, found);
             break;
         }
@@ -25,6 +21,12 @@ size_t Log::File::cutTail(size_t cutSize)
     return FIFOFile::cutTail(cutSize);
 }
 
-void Log::init() { Log::log.file = Log::File(); }
+void Log::init()
+{
+    Log::log.file = Log::File();
+}
 
-void Log::end() { Log::log.~Log(); }
+void Log::end()
+{
+    Log::log.~Log();
+}

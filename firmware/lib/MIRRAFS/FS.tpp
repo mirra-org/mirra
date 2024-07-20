@@ -32,7 +32,10 @@ template <class T> T FIFOFile::read(size_t address) const
     return buffer;
 }
 
-template <class T> void FIFOFile::push(const T& value) { push(&value, sizeof(T)); }
+template <class T> void FIFOFile::push(const T& value)
+{
+    push(&value, sizeof(T));
+}
 
 template <class T> void FIFOFile::write(size_t address, const T& value)
 {

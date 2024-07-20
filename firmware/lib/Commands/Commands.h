@@ -28,8 +28,7 @@ struct CommandAliasesPair
     template <class... Aliases>
     constexpr CommandAliasesPair(Command&& f, Aliases&&... aliases)
         : Pair(std::forward<Command>(f), {{std::forward<Aliases>(aliases)...}})
-    {
-    }
+    {}
 
     constexpr Command getCommand() const { return std::get<0>(*this); }
     constexpr AliasesArray getAliases() const { return std::get<1>(*this); }

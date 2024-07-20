@@ -18,7 +18,9 @@ private:
     DallasTemperature dallas;
 
 public:
-    SoilTemperatureSensor(uint8_t pin, uint8_t busIndex) : pin{pin}, busIndex{busIndex}, wire{OneWire(pin)}, dallas{&wire} {}
+    SoilTemperatureSensor(uint8_t pin, uint8_t busIndex)
+        : pin{pin}, busIndex{busIndex}, wire{OneWire(pin)}, dallas{&wire}
+    {}
     void startMeasurement();
     SensorValue getMeasurement();
     uint32_t getTypeTag() const { return SOIL_TEMPERATURE_KEY; };

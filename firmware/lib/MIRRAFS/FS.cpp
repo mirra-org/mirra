@@ -4,8 +4,7 @@ using namespace mirra::fs;
 
 NVS::NVS(const char* name)
 {
-    if (nvs_open(name, NVS_READWRITE, &handle) != ESP_OK)
-    {
+    if (nvs_open(name, NVS_READWRITE, &handle) != ESP_OK) {
         // log error
     };
     std::strncpy(this->name, name, NVS_KEY_NAME_MAX_SIZE);
@@ -17,7 +16,10 @@ NVS::~NVS()
     nvs_close(handle);
 }
 
-void NVS::commit() { nvs_commit(handle); }
+void NVS::commit()
+{
+    nvs_commit(handle);
+}
 uint8_t NVS::get_u8(const char* key) const
 {
     uint8_t value{0};
@@ -82,15 +84,39 @@ int64_t NVS::get_i64(const char* key) const
     return value;
 }
 
-template <> uint8_t NVS::get(const char* key) const { return get_u8(key); }
-template <> uint16_t NVS::get(const char* key) const { return get_u16(key); }
-template <> uint32_t NVS::get(const char* key) const { return get_u32(key); }
-template <> uint64_t NVS::get(const char* key) const { return get_u64(key); }
+template <> uint8_t NVS::get(const char* key) const
+{
+    return get_u8(key);
+}
+template <> uint16_t NVS::get(const char* key) const
+{
+    return get_u16(key);
+}
+template <> uint32_t NVS::get(const char* key) const
+{
+    return get_u32(key);
+}
+template <> uint64_t NVS::get(const char* key) const
+{
+    return get_u64(key);
+}
 
-template <> int8_t NVS::get(const char* key) const { return get_i8(key); }
-template <> int16_t NVS::get(const char* key) const { return get_i16(key); }
-template <> int32_t NVS::get(const char* key) const { return get_i32(key); }
-template <> int64_t NVS::get(const char* key) const { return get_i64(key); }
+template <> int8_t NVS::get(const char* key) const
+{
+    return get_i8(key);
+}
+template <> int16_t NVS::get(const char* key) const
+{
+    return get_i16(key);
+}
+template <> int32_t NVS::get(const char* key) const
+{
+    return get_i32(key);
+}
+template <> int64_t NVS::get(const char* key) const
+{
+    return get_i64(key);
+}
 
 void NVS::get_str(const char* key, char* buffer, size_t size) const
 {
@@ -164,17 +190,44 @@ void NVS::set_blob(const char* key, const void* value, size_t size)
         ; // log error
 }
 
-template <> void NVS::set(const char* key, const uint8_t& value) { set_u8(key, value); }
-template <> void NVS::set(const char* key, const uint16_t& value) { set_u16(key, value); }
-template <> void NVS::set(const char* key, const uint32_t& value) { set_u32(key, value); }
-template <> void NVS::set(const char* key, const uint64_t& value) { set_u64(key, value); }
+template <> void NVS::set(const char* key, const uint8_t& value)
+{
+    set_u8(key, value);
+}
+template <> void NVS::set(const char* key, const uint16_t& value)
+{
+    set_u16(key, value);
+}
+template <> void NVS::set(const char* key, const uint32_t& value)
+{
+    set_u32(key, value);
+}
+template <> void NVS::set(const char* key, const uint64_t& value)
+{
+    set_u64(key, value);
+}
 
-template <> void NVS::set(const char* key, const int8_t& value) { set_i8(key, value); }
-template <> void NVS::set(const char* key, const int16_t& value) { set_i16(key, value); }
-template <> void NVS::set(const char* key, const int32_t& value) { set_i32(key, value); }
-template <> void NVS::set(const char* key, const int64_t& value) { set_i64(key, value); }
+template <> void NVS::set(const char* key, const int8_t& value)
+{
+    set_i8(key, value);
+}
+template <> void NVS::set(const char* key, const int16_t& value)
+{
+    set_i16(key, value);
+}
+template <> void NVS::set(const char* key, const int32_t& value)
+{
+    set_i32(key, value);
+}
+template <> void NVS::set(const char* key, const int64_t& value)
+{
+    set_i64(key, value);
+}
 
-template <> void NVS::set(const char* key, const char* const& value) { set_str(key, value); }
+template <> void NVS::set(const char* key, const char* const& value)
+{
+    set_str(key, value);
+}
 
 bool NVS::exists(const char* key) const
 {
@@ -186,15 +239,13 @@ bool NVS::exists(const char* key) const
 void NVS::init()
 {
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
-    {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
         // NVS partition was truncated and needs to be erased
         // Retry nvs_flash_init
         nvs_flash_erase();
         err = nvs_flash_init();
     }
-    if (err != ESP_OK)
-    {
+    if (err != ESP_OK) {
         // log error
     }
 }
@@ -207,7 +258,10 @@ Partition::Partition(const char* name)
     strncpy(this->name, name, partitionNameMaxSize);
 }
 
-Partition::~Partition() { flush(); }
+Partition::~Partition()
+{
+    flush();
+}
 
 constexpr size_t Partition::toSectorAddress(size_t address)
 {
@@ -248,8 +302,7 @@ void Partition::writeSector()
 void Partition::read(size_t address, void* buffer, size_t size) const
 {
     // if address in sector buffer: read straight from it
-    if (inSector(address))
-    {
+    if (inSector(address)) {
         size_t toRead = std::min(sectorSize - (address - sectorAddress), size);
         std::memcpy(buffer, &sectorBuffer.get()[address - sectorAddress], toRead);
         address += toRead;
@@ -257,8 +310,7 @@ void Partition::read(size_t address, void* buffer, size_t size) const
         size -= toRead;
     }
     // else (or if not all requested data in sector buffer), read straight from flash
-    while (size > 0)
-    {
+    while (size > 0) {
         size_t toRead = std::min(maxSize - address, size);
         esp_partition_read(part, address, buffer, size);
         address = (address + toRead) % getMaxSize();
@@ -269,8 +321,7 @@ void Partition::read(size_t address, void* buffer, size_t size) const
 
 void Partition::write(size_t address, const void* buffer, size_t size)
 {
-    while (size > 0)
-    {
+    while (size > 0) {
         if (!inSector(address))
             readSector(toSectorAddress(address));
 
@@ -285,8 +336,7 @@ void Partition::write(size_t address, const void* buffer, size_t size)
 
 void Partition::flush()
 {
-    if (sectorDirty)
-    {
+    if (sectorDirty) {
         writeSector();
     }
 }
@@ -298,7 +348,10 @@ FIFOFile::FIFOFile(const char* name)
     loadFirstSector(head);
 }
 
-size_t FIFOFile::freeSpace() const { return getMaxSize() - size; }
+size_t FIFOFile::freeSpace() const
+{
+    return getMaxSize() - size;
+}
 
 void FIFOFile::read(size_t address, void* buffer, size_t size) const
 {

@@ -61,8 +61,7 @@ public:
         Value(const char* key, NVS* nvs) : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key)} {}
         Value(const char* key, NVS* nvs, const T& defaultValue)
             : key{key}, nvs{nvs}, cachedValue{exists() ? nvs->get<T>(key) : defaultValue}
-        {
-        }
+        {}
 
     public:
         Value(const Value&) = delete;

@@ -52,8 +52,7 @@ void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
 {
     uint32_t cTime{static_cast<uint32_t>(time(nullptr))};
     uint32_t target{cTime};
-    while (nextSampleTime <= cTime)
-    {
+    while (nextSampleTime <= cTime) {
         // extract month and day from current target
         tm day;
         gmtime_r(reinterpret_cast<time_t*>(&target), &day);
@@ -64,8 +63,10 @@ void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
         uint32_t point = (pointB * day.tm_mday) / 31 + (pointA * (31 - day.tm_mday)) / 31;
 
         // calculate target sample time
-        target = ((target / 60 / 60 / 24) * 60 * 60 * 24) + point + 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
-        nextSampleTime = (target / sampleInterval) * sampleInterval + (nextSampleTime % sampleInterval);
+        target = ((target / 60 / 60 / 24) * 60 * 60 * 24) + point +
+                 2 * 60 * 60; // + 2 hours (best lighting conditions after sunrise)
+        nextSampleTime =
+            (target / sampleInterval) * sampleInterval + (nextSampleTime % sampleInterval);
         target += 24 * 60 * 60;
     }
 }

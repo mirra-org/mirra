@@ -1,7 +1,10 @@
 #include "SoilTempSensor.h"
 #include <DallasTemperature.h>
 
-void SoilTemperatureSensor::startMeasurement() { dallas.begin(); }
+void SoilTemperatureSensor::startMeasurement()
+{
+    dallas.begin();
+}
 
 SensorValue SoilTemperatureSensor::getMeasurement()
 {

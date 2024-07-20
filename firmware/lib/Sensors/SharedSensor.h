@@ -43,7 +43,10 @@ private:
     }
 
 public:
-    template <class... Args> static std::shared_ptr<D> make(Args&&... args) { return std::make_shared<D>(std::forward<Args>(args)...); }
+    template <class... Args> static std::shared_ptr<D> make(Args&&... args)
+    {
+        return std::make_shared<D>(std::forward<Args>(args)...);
+    }
 
     friend class SharingSensor<SharedSensor>;
 };

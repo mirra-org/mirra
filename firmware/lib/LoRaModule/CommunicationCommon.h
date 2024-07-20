@@ -18,8 +18,7 @@ public:
     /// @param address Raw byte pointer to MACAddress.
     MACAddress(const uint8_t* address)
         : address{*reinterpret_cast<const std::array<uint8_t, 6>*>(address)}
-    {
-    }
+    {}
     /// @brief Gets the raw byte pointer to the MAC address.
     /// @return A raw byte pointer to the MAC address.
     uint8_t* getAddress() { return address.data(); }
@@ -80,8 +79,7 @@ private:
 protected:
     MessageHeader(MessageType type, const MACAddress& src, const MACAddress& dest)
         : type{type}, last{false}, src{src}, dest{dest}
-    {
-    }
+    {}
 
 public:
     constexpr MessageType getType() const { return this->type; }
@@ -138,19 +136,19 @@ public:
             uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
             uint32_t commInterval, uint32_t commTime, uint32_t maxMessages)
         : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval},
-          sampleRounding{sampleRounding}, sampleOffset{sampleOffset}, commInterval{commInterval},
-          commTime{commTime}, maxMessages{maxMessages} {};
+          sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
+          commInterval{commInterval}, commTime{commTime}, maxMessages{maxMessages} {};
 
-    uint32_t getCTime() const { return curTime; };
-    uint32_t getSampleInterval() const { return sampleInterval; };
-    uint32_t getSampleRounding() const { return sampleRounding; };
-    uint32_t getSampleOffset() const { return sampleOffset; };
-    uint32_t getCommInterval() const { return commInterval; };
-    uint32_t getCommTime() const { return commTime; };
-    uint32_t getMaxMessages() const { return maxMessages; };
+    uint32_t getCTime() const { return curTime; }
+    uint32_t getSampleInterval() const { return sampleInterval; }
+    uint32_t getSampleRounding() const { return sampleRounding; }
+    uint32_t getSampleOffset() const { return sampleOffset; }
+    uint32_t getCommInterval() const { return commInterval; }
+    uint32_t getCommTime() const { return commTime; }
+    uint32_t getMaxMessages() const { return maxMessages; }
 
     /// @return The messages' length in bytes.
-    constexpr size_t getLength() const { return sizeof(*this); };
+    constexpr size_t getLength() const { return sizeof(*this); }
     /// @return Whether the message's type flag matches the desired type.
     constexpr bool isValid() const { return isType(TIME_CONFIG); }
     /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
@@ -189,7 +187,7 @@ public:
     constexpr size_t getLength() const
     {
         return headerLength + sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue);
-    };
+    }
     /// @return Whether the message's type flag matches the desired type.
     constexpr bool isValid() const { return isType(SENSOR_DATA); }
     /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
