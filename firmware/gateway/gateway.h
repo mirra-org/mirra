@@ -138,7 +138,7 @@ private:
     /// through deep sleep.
     void updateNodesFile();
 
-    void removeNode(Node&) {};
+    void removeNode(Node&){};
 
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();

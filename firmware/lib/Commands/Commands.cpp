@@ -1,5 +1,6 @@
 #include "Commands.h"
 
+#include "FS.h"
 #include "logging.h"
 #include <Arduino.h>
 
@@ -14,19 +15,23 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
     uint64_t timeout;
     uint8_t length{0};
     std::array<char, lineMaxLength> buffer{0};
-    while (length < lineMaxLength - 1) {
+    while (length < lineMaxLength - 1)
+    {
         timeout = static_cast<uint64_t>(esp_timer_get_time()) + (UART_PHASE_TIMEOUT * 1000 * 1000);
-        while (!Serial.available()) {
+        while (!Serial.available())
+        {
             if (esp_timer_get_time() >= timeout)
                 return std::nullopt;
         }
         char c = Serial.read();
         Serial.print(c);
-        if (c == '\r' || c == '\n') {
+        if (c == '\r' || c == '\n')
+        {
             if (Serial.available()) // on Windows: both CR and LF
                 Serial.print(static_cast<char>(Serial.read()));
             break;
-        } else if (c == '\b') // backspace
+        }
+        else if (c == '\b') // backspace
         {
             if (length == 0)
                 continue;
@@ -34,7 +39,9 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
             Serial.print('\b');
             length--;
             buffer[length] = '\0';
-        } else {
+        }
+        else
+        {
             buffer[length] = c;
             length++;
             if (length == lineMaxLength - 1)
@@ -50,7 +57,8 @@ CommandCode CommonCommands::printLogs()
     char buffer[bufferSize];
     size_t cursor{0};
     Serial.printf("Logs: %u out of %u KB.\n", Log::log.file.getSize(), Log::log.file.getMaxSize());
-    while (cursor < Log::log.file.getSize()) {
+    while (cursor < Log::log.file.getSize())
+    {
         Log::log.file.read(cursor, buffer, bufferSize);
         Serial.write(buffer, std::min(bufferSize, Log::log.file.getSize() - cursor));
         cursor += bufferSize;

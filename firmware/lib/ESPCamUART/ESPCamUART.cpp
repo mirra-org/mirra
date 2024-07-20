@@ -52,7 +52,8 @@ void ESPCamUART::updateNextSampleTime(uint32_t sampleInterval)
 {
     uint32_t cTime{static_cast<uint32_t>(time(nullptr))};
     uint32_t target{cTime};
-    while (nextSampleTime <= cTime) {
+    while (nextSampleTime <= cTime)
+    {
         // extract month and day from current target
         tm day;
         gmtime_r(reinterpret_cast<time_t*>(&target), &day);

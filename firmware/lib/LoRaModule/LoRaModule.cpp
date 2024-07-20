@@ -13,9 +13,12 @@ LoRaModule::LoRaModule(const uint8_t csPin, const uint8_t rstPin, const uint8_t 
     esp_efuse_mac_get_default(this->mac.getAddress());
     int state = this->begin(LORA_FREQUENCY, LORA_BANDWIDTH, LORA_SPREADING_FACTOR, LORA_CODING_RATE,
                             LORA_SYNC_WORD, LORA_POWER, LORA_PREAMBLE_LENGHT, LORA_AMPLIFIER_GAIN);
-    if (state == RADIOLIB_ERR_NONE) {
+    if (state == RADIOLIB_ERR_NONE)
+    {
         Log::debug("LoRa init successful for ", this->getMACAddress().toString());
-    } else {
+    }
+    else
+    {
         Log::error("LoRa module init failed, code: ", state);
     }
 };
@@ -32,10 +35,13 @@ void LoRaModule::sendPacket(const uint8_t* buffer, size_t length)
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
     esp_sleep_enable_ext0_wakeup((gpio_num_t)this->DIO0Pin, 1);
     int state = this->startTransmit(const_cast<uint8_t*>(buffer), length);
-    if (state == RADIOLIB_ERR_NONE) {
+    if (state == RADIOLIB_ERR_NONE)
+    {
         esp_light_sleep_start();
         Log::debug("Packet sent!");
-    } else {
+    }
+    else
+    {
         Log::error("Send failed, code: ", state);
     }
     this->finishTransmit();
@@ -43,7 +49,8 @@ void LoRaModule::sendPacket(const uint8_t* buffer, size_t length)
 
 void LoRaModule::resendMessage()
 {
-    if (sendLength == 0) {
+    if (sendLength == 0)
+    {
         Log::error("Could not repeat last sent message because no message has been sent yet.");
         esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
         return;

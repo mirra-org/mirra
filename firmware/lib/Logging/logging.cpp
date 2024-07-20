@@ -8,12 +8,16 @@ size_t Log::File::cutTail(size_t cutSize)
 {
     static constexpr size_t searchSize{128};
     uint8_t searchBuffer[searchSize];
-    while (true) {
+    while (true)
+    {
         read(cutSize, &searchBuffer, searchSize);
         uint8_t* found = reinterpret_cast<uint8_t*>(std::memchr(searchBuffer, '\n', searchSize));
-        if (found == nullptr) {
+        if (found == nullptr)
+        {
             cutSize += searchSize;
-        } else {
+        }
+        else
+        {
             cutSize += std::distance(searchBuffer, found);
             break;
         }

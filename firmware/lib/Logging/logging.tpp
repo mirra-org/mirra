@@ -1,6 +1,7 @@
 constexpr std::string_view Log::levelToString(Level level)
 {
-    switch (level) {
+    switch (level)
+    {
     case Level::ERROR:
         return "ERROR: ";
     case Level::INFO:
@@ -64,18 +65,27 @@ template <> constexpr std::string_view rawTypeToFormatSpecifier<char>()
 template <class T> constexpr std::string_view typeToFormatSpecifier()
 {
     using rawType = std::decay_t<T>;
-    if constexpr (std::is_enum_v<rawType>) {
+    if constexpr (std::is_enum_v<rawType>)
+    {
         using underlyingType = std::underlying_type_t<rawType>;
-        if constexpr (std::is_same_v<std::make_unsigned_t<underlyingType>, unsigned char>) {
-            if constexpr (std::is_signed_v<underlyingType>) {
+        if constexpr (std::is_same_v<std::make_unsigned_t<underlyingType>, unsigned char>)
+        {
+            if constexpr (std::is_signed_v<underlyingType>)
+            {
                 return rawTypeToFormatSpecifier<signed int>();
-            } else {
+            }
+            else
+            {
                 return rawTypeToFormatSpecifier<unsigned int>();
             }
-        } else {
+        }
+        else
+        {
             return rawTypeToFormatSpecifier<underlyingType>();
         }
-    } else {
+    }
+    else
+    {
         return rawTypeToFormatSpecifier<rawType>();
     }
 }
@@ -84,7 +94,8 @@ template <class... Ts> constexpr auto createFormatString()
 {
     std::array<char, (typeToFormatSpecifier<Ts>().size() + ... + 1)> fmt{0};
     size_t i{0};
-    for (const auto& s : std::array{typeToFormatSpecifier<Ts>()...}) {
+    for (const auto& s : std::array{typeToFormatSpecifier<Ts>()...})
+    {
         for (auto c : s)
             fmt[i++] = c;
     }

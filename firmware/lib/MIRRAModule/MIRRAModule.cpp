@@ -33,8 +33,8 @@ void MIRRAModule::end()
     gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
-      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin,
+                                                             pins.rxPin, pins.txPin},
       commandEntry{pins.bootPin, true}
 {
     Log::log.serial = &Serial;

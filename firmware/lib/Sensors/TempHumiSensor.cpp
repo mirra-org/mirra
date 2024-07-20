@@ -4,7 +4,8 @@
 void SharedSHTSensor::setup(void)
 {
     Serial.println("SHT setup.");
-    if (baseSensor.init()) {
+    if (baseSensor.init())
+    {
         Serial.println("SHT init OK.");
     }
 }

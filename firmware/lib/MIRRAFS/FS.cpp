@@ -4,7 +4,8 @@ using namespace mirra::fs;
 
 NVS::NVS(const char* name)
 {
-    if (nvs_open(name, NVS_READWRITE, &handle) != ESP_OK) {
+    if (nvs_open(name, NVS_READWRITE, &handle) != ESP_OK)
+    {
         // log error
     };
     std::strncpy(this->name, name, NVS_KEY_NAME_MAX_SIZE);
@@ -239,13 +240,15 @@ bool NVS::exists(const char* key) const
 void NVS::init()
 {
     esp_err_t err = nvs_flash_init();
-    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+    if (err == ESP_ERR_NVS_NO_FREE_PAGES || err == ESP_ERR_NVS_NEW_VERSION_FOUND)
+    {
         // NVS partition was truncated and needs to be erased
         // Retry nvs_flash_init
         nvs_flash_erase();
         err = nvs_flash_init();
     }
-    if (err != ESP_OK) {
+    if (err != ESP_OK)
+    {
         // log error
     }
 }
@@ -302,7 +305,8 @@ void Partition::writeSector()
 void Partition::read(size_t address, void* buffer, size_t size) const
 {
     // if address in sector buffer: read straight from it
-    if (inSector(address)) {
+    if (inSector(address))
+    {
         size_t toRead = std::min(sectorSize - (address - sectorAddress), size);
         std::memcpy(buffer, &sectorBuffer.get()[address - sectorAddress], toRead);
         address += toRead;
@@ -310,7 +314,8 @@ void Partition::read(size_t address, void* buffer, size_t size) const
         size -= toRead;
     }
     // else (or if not all requested data in sector buffer), read straight from flash
-    while (size > 0) {
+    while (size > 0)
+    {
         size_t toRead = std::min(maxSize - address, size);
         esp_partition_read(part, address, buffer, size);
         address = (address + toRead) % getMaxSize();
@@ -321,7 +326,8 @@ void Partition::read(size_t address, void* buffer, size_t size) const
 
 void Partition::write(size_t address, const void* buffer, size_t size)
 {
-    while (size > 0) {
+    while (size > 0)
+    {
         if (!inSector(address))
             readSector(toSectorAddress(address));
 
@@ -336,7 +342,8 @@ void Partition::write(size_t address, const void* buffer, size_t size)
 
 void Partition::flush()
 {
-    if (sectorDirty) {
+    if (sectorDirty)
+    {
         writeSector();
     }
 }

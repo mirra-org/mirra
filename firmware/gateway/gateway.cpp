@@ -190,8 +190,9 @@ void Gateway::commPeriod()
     for (const Node& n : nodes)
         expectedMessages += n.getMaxMessages();
     data.reserve(expectedMessages);
-    auto lambdaByNextCommTime = [](const Node& a, const Node& b)
-    { return a.getNextCommTime() < b.getNextCommTime(); };
+    auto lambdaByNextCommTime = [](const Node& a, const Node& b) {
+        return a.getNextCommTime() < b.getNextCommTime();
+    };
     std::sort(nodes.begin(), nodes.end(), lambdaByNextCommTime);
     uint32_t farCommTime = -1;
     for (Node& n : nodes)
@@ -319,7 +320,10 @@ void Gateway::wifiConnect(const char* SSID, const char* password)
     Log::info("Connected to WiFi.");
 }
 
-void Gateway::wifiConnect() { wifiConnect(ssid, pass); }
+void Gateway::wifiConnect()
+{
+    wifiConnect(ssid, pass);
+}
 
 bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 {
