@@ -57,8 +57,7 @@ size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
     size_t removed{0};
     while (removed < cutSize)
     {
-        removed +=
-            DataEntry::getSize(read<Message<SENSOR_DATA>::Flags>(removed + sizeof(MACAddress)));
+        removed += DataEntry::getSize(read<DataEntry::Flags>(removed + sizeof(MACAddress)));
     }
     reader = reader < removed ? 0 : reader - removed;
     return FIFOFile::cutTail(removed);
@@ -104,7 +103,8 @@ void MIRRAModule::SensorFile::setUploaded()
 
 void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
 {
-    FIFOFile::push(DataEntry{message.getSource(), message.flags, message.time, message.values});
+    FIFOFile::push(DataEntry{message.getSource(), DataEntry::Flags{message.nValues, false},
+                             message.time, message.values});
 }
 
 void MIRRAModule::deepSleep(uint32_t sleepTime)

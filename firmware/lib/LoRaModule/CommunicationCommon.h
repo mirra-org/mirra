@@ -165,19 +165,15 @@ public:
 template <> class Message<SENSOR_DATA> : public MessageHeader
 {
 public:
-    struct Flags
-    {
-        /// @brief The amount of values held in the messages' values array.
-        uint8_t nValues : 7;
-        bool uploaded : 1;
-    };
-    Flags flags;
+    /// @brief The amount of values held in the messages' values array.
+    uint8_t nValues;
+
     /// @brief The timestamp associated with the held values (UNIX epoch, seconds).
     uint32_t time;
 
     /// @brief The maximum amount of sensor values that can be held in a single sensor data message.
     static const size_t maxNValues =
-        (maxLength - headerLength - sizeof(time) - sizeof(flags)) / sizeof(SensorValue);
+        (maxLength - headerLength - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue);
 
     struct SensorValueArray : public std::array<SensorValue, Message<SENSOR_DATA>::maxNValues>
     {
@@ -187,12 +183,12 @@ public:
     Message(const MACAddress& src, const MACAddress& dest, uint32_t time, const uint8_t nValues,
             const std::array<SensorValue, maxNValues> values)
         : MessageHeader(SENSOR_DATA, src, dest), time{time},
-          flags{std::min(nValues, static_cast<uint8_t>(maxNValues)), false}, values{values} {};
+          nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{values} {};
 
     /// @return The messages' length in bytes.
     constexpr size_t getLength() const
     {
-        return headerLength + sizeof(time) + sizeof(flags) + flags.nValues * sizeof(SensorValue);
+        return headerLength + sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue);
     };
     /// @return Whether the message's type flag matches the desired type.
     constexpr bool isValid() const { return isType(SENSOR_DATA); }
@@ -205,7 +201,7 @@ public:
 constexpr Message<SENSOR_DATA>& Message<SENSOR_DATA>::fromData(uint8_t* data)
 {
     Message<SENSOR_DATA>& m{*reinterpret_cast<Message<SENSOR_DATA>*>(data)};
-    m.flags.nValues = std::min(m.flags.nValues, static_cast<uint8_t>(maxNValues));
+    m.nValues = std::min(m.nValues, static_cast<uint8_t>(maxNValues));
     return m;
 }
 

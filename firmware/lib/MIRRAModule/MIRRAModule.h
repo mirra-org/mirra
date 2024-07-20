@@ -65,7 +65,11 @@ protected:
     public:
         struct DataEntry
         {
-            using Flags = Message<SENSOR_DATA>::Flags;
+            struct Flags
+            {
+                uint8_t nValues : 7;
+                bool uploaded : 1;
+            };
             using SensorValueArray = Message<SENSOR_DATA>::SensorValueArray;
 
             MACAddress source;
