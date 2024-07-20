@@ -13,7 +13,7 @@ constexpr std::string_view Log::levelToString(Level level)
 
 template <Log::Level level> size_t Log::printPreamble(const tm& time)
 {
-    constexpr size_t timeLength{sizeof("[0000-00-00 00:00:00]")};
+    static constexpr size_t timeLength{sizeof("[0000-00-00 00:00:00]")};
     strftime(buffer, timeLength, "[%F %T]", &time);
     constexpr std::string_view levelString{levelToString(level)};
     strcpy(&buffer[timeLength - 1], levelString.cbegin());
