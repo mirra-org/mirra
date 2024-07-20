@@ -23,6 +23,7 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 
 void MIRRAModule::end()
 {
+    fs::NVS::deinit();
     Log::end();
     lora.sleep();
     Wire.end();
@@ -242,4 +243,12 @@ CommandCode MIRRAModule::Commands::printDataRaw()
         Serial.print('\n');
     }
     return COMMAND_SUCCESS;
+}
+
+CommandCode MIRRAModule::Commands::format()
+{
+    Serial.println("Erasing NVS...");
+    nvs_flash_erase();
+    Serial.println("Restarting...");
+    ESP.restart();
 }

@@ -51,6 +51,9 @@ protected:
         CommandCode printData();
         /// @brief Prints all stored data entries to the serial output as a hex dump.
         CommandCode printDataRaw();
+        /// @brief Formats the module, clearing the entire NVS and filesystem and restarts the
+        /// module (effectively a hard reset).
+        CommandCode format();
 
         static constexpr auto getCommands()
         {
@@ -59,7 +62,8 @@ protected:
                 std::make_tuple(
                     CommandAliasesPair(&Commands::setLogLevel, "setlog", "setloglevel"),
                     CommandAliasesPair(&Commands::printData, "printdata", "printdatafile"),
-                    CommandAliasesPair(&Commands::printDataRaw, "printdataraw", "printdatahex")));
+                    CommandAliasesPair(&Commands::printDataRaw, "printdataraw", "printdatahex"),
+                    CommandAliasesPair(&Commands::format, "format")));
         }
     };
 
