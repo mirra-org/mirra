@@ -32,8 +32,8 @@ void MIRRAModule::end()
     gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin,
-                                                             pins.rxPin, pins.txPin},
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
+      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
       commandEntry{pins.bootPin, true}
 {
     Log::log.serial = &Serial;
@@ -69,7 +69,6 @@ std::optional<size_t> MIRRAModule::SensorFile::getUnuploadedAddress(size_t index
         if (address == getSize())
             return std::nullopt;
         DataEntry::Flags flags = read<DataEntry::Flags>(address + sizeof(MACAddress));
-        address += DataEntry::getSize(flags);
         if (!flags.uploaded) {
             if (count == 0)
                 reader = address;
@@ -77,6 +76,7 @@ std::optional<size_t> MIRRAModule::SensorFile::getUnuploadedAddress(size_t index
                 return address;
             count++;
         }
+        address += DataEntry::getSize(flags);
     }
 }
 
