@@ -258,7 +258,7 @@ void NVS::deinit()
 Partition::Partition(const char* name)
     : part{esp_partition_find_first(ESP_PARTITION_TYPE_DATA, ESP_PARTITION_SUBTYPE_DATA_UNDEFINED,
                                     name)},
-      sectorBuffer{new std::array<uint8_t, sectorSize>}, maxSize{part->size}
+      maxSize{part->size}, sectorBuffer{new std::array<uint8_t, sectorSize>}
 {
     strncpy(this->name, name, partitionNameMaxSize);
 }

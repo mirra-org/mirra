@@ -120,7 +120,8 @@ class Partition
     static constexpr size_t sectorSize = 4096;
     static constexpr size_t toSectorAddress(size_t address);
 
-    char* name;
+    const esp_partition_t* part;
+    char name[partitionNameMaxSize];
     size_t maxSize;
     std::unique_ptr<std::array<uint8_t, sectorSize>> sectorBuffer;
     size_t sectorAddress;
@@ -131,7 +132,6 @@ class Partition
     void writeSector();
 
 protected:
-    const esp_partition_t* part;
     Partition(const char* name);
     void loadFirstSector(size_t address);
 
