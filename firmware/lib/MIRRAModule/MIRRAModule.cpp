@@ -251,4 +251,5 @@ CommandCode MIRRAModule::Commands::format()
     nvs_flash_erase();
     Serial.println("Restarting...");
     ESP.restart();
+    return COMMAND_SUCCESS;
 }
