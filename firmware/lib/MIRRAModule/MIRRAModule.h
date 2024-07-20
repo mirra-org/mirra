@@ -47,12 +47,19 @@ protected:
         /// @brief Change the log level.
         /// @param arg String describing the new log level. ("ERROR", "INFO" or "DEBUG")
         CommandCode setLogLevel(const char* arg);
+        /// @brief Prints all stored data entries to the serial output in human readable format.
+        CommandCode printData();
+        /// @brief Prints all stored data entries to the serial output as a hex dump.
+        CommandCode printDataRaw();
 
         static constexpr auto getCommands()
         {
-            return std::tuple_cat(CommonCommands::getCommands(),
-                                  std::make_tuple(CommandAliasesPair(&Commands::setLogLevel,
-                                                                     "setlog", "setloglevel")));
+            return std::tuple_cat(
+                CommonCommands::getCommands(),
+                std::make_tuple(
+                    CommandAliasesPair(&Commands::setLogLevel, "setlog", "setloglevel"),
+                    CommandAliasesPair(&Commands::printData, "printdata", "printdatafile"),
+                    CommandAliasesPair(&Commands::printDataRaw, "printdataraw", "printdatahex")));
         }
     };
 
@@ -79,25 +86,40 @@ protected:
 
             static constexpr size_t getSize(Flags flags)
             {
-                return sizeof(source) + sizeof(flags) + sizeof(time) +
+                return sizeof(source) + sizeof(time) + sizeof(flags) +
                        flags.nValues * sizeof(SensorValue);
             }
-            constexpr size_t getSize() { return getSize(flags); }
+            constexpr size_t getSize() const { return getSize(flags); }
         } __attribute__((packed));
 
         SensorFile();
-        using FIFOFile::getSize;
-        void push(const Message<SENSOR_DATA>& message);
-        void push(const DataEntry& entry) { push(entry); }
-        /* void push(const MACAddress& source, uint32_t time, uint8_t nValues,
-                  const std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values); */
 
+        using FIFOFile::getSize;
+
+        using FIFOFile::read;
+        class Iterator
+        {
+            size_t address;
+            const SensorFile* file;
+            Iterator(size_t address, const SensorFile* file) : address{address}, file{file} {}
+
+        public:
+            Iterator& operator++();
+            bool operator!=(const Iterator& other) const { return this->address != other.address; }
+            DataEntry operator*() const { return file->read<DataEntry>(address); }
+
+            friend class SensorFile;
+        };
+
+        Iterator begin() const { return Iterator(0, this); };
+        Iterator end() const { return Iterator(getSize(), this); };
         std::optional<size_t> getUnuploadedAddress(size_t index);
         std::optional<DataEntry> getUnuploaded(size_t index);
         bool isLast(size_t index);
 
+        void push(const Message<SENSOR_DATA>& message);
+        void push(const DataEntry& entry) { FIFOFile::push(&entry, entry.getSize()); }
         void setUploaded();
-        using FIFOFile::read;
 
         void flush();
     };
