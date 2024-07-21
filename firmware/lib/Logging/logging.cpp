@@ -28,3 +28,8 @@ size_t Log::File::cutTail(size_t cutSize)
     }
     return FIFOFile::cutTail(cutSize);
 }
+
+void Log::close()
+{
+    getInstance().~Log();
+}

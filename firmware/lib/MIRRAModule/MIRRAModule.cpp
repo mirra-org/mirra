@@ -24,7 +24,7 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
 
 void MIRRAModule::end()
 {
-    fs::NVS::deinit();
+    Log::close();
     lora.sleep();
     Wire.end();
     Serial.flush();

@@ -75,6 +75,8 @@ public:
     {
         getInstance().print<Level::ERROR>(args...);
     }
+
+    static void close();
 };
 
 /// @return A format specifier string matched to the type argument.
