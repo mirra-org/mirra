@@ -6,6 +6,7 @@
 #include <memory>
 #include <nvs.h>
 #include <nvs_flash.h>
+#include <optional>
 #include <utility>
 
 namespace mirra::fs
@@ -16,35 +17,12 @@ private:
     nvs_handle_t handle;
     char name[NVS_KEY_NAME_MAX_SIZE];
 
-    uint8_t get_u8(const char* key) const;
-    uint16_t get_u16(const char* key) const;
-    uint32_t get_u32(const char* key) const;
-    uint64_t get_u64(const char* key) const;
+    template <class T> std::optional<T> get(const char* key) const;
+    esp_err_t get_str(const char* key, char* buffer, size_t size) const;
+    esp_err_t get_blob(const char* key, void* buffer, size_t size) const;
 
-    int8_t get_i8(const char* key) const;
-    int16_t get_i16(const char* key) const;
-    int32_t get_i32(const char* key) const;
-    int64_t get_i64(const char* key) const;
-
-    void get_str(const char* key, char* buffer, size_t size) const;
-    void get_blob(const char* key, void* buffer, size_t size) const;
-
-    void set_u8(const char* key, uint8_t value);
-    void set_u16(const char* key, uint16_t value);
-    void set_u32(const char* key, uint32_t value);
-    void set_u64(const char* key, uint64_t value);
-
-    void set_i8(const char* key, int8_t value);
-    void set_i16(const char* key, int16_t value);
-    void set_i32(const char* key, int32_t value);
-    void set_i64(const char* key, int64_t value);
-
-    void set_str(const char* key, const char* value);
+    template <class T> void set(const char* key, const T& value);
     void set_blob(const char* key, const void* value, size_t size);
-
-    bool exists(const char* key) const;
-    template <class T> T get(const char* key) const;
-    template <class T> void set(const char* key, T&& value);
 
 public:
     NVS(const char* name);
@@ -60,16 +38,16 @@ public:
 
         Value(const char* key, NVS* nvs) : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key)} {}
         Value(const char* key, NVS* nvs, const T& defaultValue)
-            : key{key}, nvs{nvs}, cachedValue{exists() ? nvs->get<T>(key) : defaultValue}
+            : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key).value_or(defaultValue)}
         {}
 
     public:
         Value(const Value&) = delete;
         Value(Value&&) = default;
         Value& operator=(Value&&) = default;
-        ~Value() { commit(); }
 
-        bool exists() const { return nvs->exists(key); }
+        ~Value() { commit(); };
+
         void commit() { nvs->set(key, cachedValue); }
         T& operator=(const T& other) { return cachedValue = other; }
         T& operator=(T&& other) { return cachedValue = std::move(other); }
@@ -111,7 +89,6 @@ public:
     Iterator end() const { return Iterator(nullptr); };
 
     static void init();
-    static void deinit();
 };
 
 class Partition

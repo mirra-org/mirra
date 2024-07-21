@@ -19,222 +19,136 @@ NVS::~NVS()
 
 void NVS::commit()
 {
-    nvs_commit(handle);
+    esp_err_t err = nvs_commit(handle);
+    if (err != ESP_OK)
+        Serial.printf("Error while committing changes to NVS, code: %i\n", err);
 }
-uint8_t NVS::get_u8(const char* key) const
+template <> std::optional<uint8_t> NVS::get(const char* key) const
 {
     uint8_t value{0};
     if (nvs_get_u8(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-uint16_t NVS::get_u16(const char* key) const
+template <> std::optional<uint16_t> NVS::get(const char* key) const
 {
     uint16_t value{0};
     if (nvs_get_u16(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-uint32_t NVS::get_u32(const char* key) const
+template <> std::optional<uint32_t> NVS::get(const char* key) const
 {
     uint32_t value{0};
     if (nvs_get_u32(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-uint64_t NVS::get_u64(const char* key) const
+template <> std::optional<uint64_t> NVS::get(const char* key) const
 {
     uint64_t value{0};
     if (nvs_get_u64(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-int8_t NVS::get_i8(const char* key) const
+template <> std::optional<int8_t> NVS::get(const char* key) const
 {
     int8_t value{0};
     if (nvs_get_i8(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-int16_t NVS::get_i16(const char* key) const
+template <> std::optional<int16_t> NVS::get(const char* key) const
 {
     int16_t value{0};
     if (nvs_get_i16(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-int32_t NVS::get_i32(const char* key) const
+template <> std::optional<int32_t> NVS::get(const char* key) const
 {
     int32_t value{0};
     if (nvs_get_i32(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-int64_t NVS::get_i64(const char* key) const
+template <> std::optional<int64_t> NVS::get(const char* key) const
 {
     int64_t value{0};
     if (nvs_get_i64(handle, key, &value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        return std::nullopt;
     return value;
 }
 
-template <> uint8_t NVS::get(const char* key) const
+esp_err_t NVS::get_str(const char* key, char* buffer, size_t size) const
 {
-    return get_u8(key);
-}
-template <> uint16_t NVS::get(const char* key) const
-{
-    return get_u16(key);
-}
-template <> uint32_t NVS::get(const char* key) const
-{
-    return get_u32(key);
-}
-template <> uint64_t NVS::get(const char* key) const
-{
-    return get_u64(key);
+    return nvs_get_str(handle, key, buffer, &size) != ESP_OK;
 }
 
-template <> int8_t NVS::get(const char* key) const
+esp_err_t NVS::get_blob(const char* key, void* buffer, size_t size) const
 {
-    return get_i8(key);
-}
-template <> int16_t NVS::get(const char* key) const
-{
-    return get_i16(key);
-}
-template <> int32_t NVS::get(const char* key) const
-{
-    return get_i32(key);
-}
-template <> int64_t NVS::get(const char* key) const
-{
-    return get_i64(key);
+    return nvs_get_blob(handle, key, buffer, &size) != ESP_OK;
 }
 
-void NVS::get_str(const char* key, char* buffer, size_t size) const
-{
-    if (nvs_get_str(handle, key, buffer, &size) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
-}
-
-void NVS::get_blob(const char* key, void* buffer, size_t size) const
-{
-    if (nvs_get_blob(handle, key, buffer, &size) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
-}
-
-void NVS::set_u8(const char* key, uint8_t value)
+template <> void NVS::set(const char* key, const uint8_t& value)
 {
     if (nvs_set_u8(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_u16(const char* key, uint16_t value)
+template <> void NVS::set(const char* key, const uint16_t& value)
 {
     if (nvs_set_u16(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_u32(const char* key, uint32_t value)
+template <> void NVS::set(const char* key, const uint32_t& value)
 {
     if (nvs_set_u32(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_u64(const char* key, uint64_t value)
+template <> void NVS::set(const char* key, const uint64_t& value)
 {
     if (nvs_set_u64(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
 
-void NVS::set_i8(const char* key, int8_t value)
+template <> void NVS::set(const char* key, const int8_t& value)
 {
     if (nvs_set_i8(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_i16(const char* key, int16_t value)
+template <> void NVS::set(const char* key, const int16_t& value)
 {
     if (nvs_set_i16(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_i32(const char* key, int32_t value)
+template <> void NVS::set(const char* key, const int32_t& value)
 {
     if (nvs_set_i32(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
-
-void NVS::set_i64(const char* key, int64_t value)
+template <> void NVS::set(const char* key, const int64_t& value)
 {
     if (nvs_set_i64(handle, key, value) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
 
-void NVS::set_str(const char* key, const char* buffer)
+template <> void NVS::set(const char* key, const char* const& value)
 {
-    if (nvs_set_str(handle, key, buffer) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
+    if (nvs_set_str(handle, key, value) != ESP_OK)
+        Serial.printf("Error while setting key '%s'\n", key);
 }
 
 void NVS::set_blob(const char* key, const void* value, size_t size)
 {
     if (nvs_set_blob(handle, key, value, size) != ESP_OK)
-        Serial.printf("Error while getting/setting key '%s'\n", key);
-}
-
-template <> void NVS::set(const char* key, const uint8_t& value)
-{
-    set_u8(key, value);
-}
-template <> void NVS::set(const char* key, const uint16_t& value)
-{
-    set_u16(key, value);
-}
-template <> void NVS::set(const char* key, const uint32_t& value)
-{
-    set_u32(key, value);
-}
-template <> void NVS::set(const char* key, const uint64_t& value)
-{
-    set_u64(key, value);
-}
-
-template <> void NVS::set(const char* key, const int8_t& value)
-{
-    set_i8(key, value);
-}
-template <> void NVS::set(const char* key, const int16_t& value)
-{
-    set_i16(key, value);
-}
-template <> void NVS::set(const char* key, const int32_t& value)
-{
-    set_i32(key, value);
-}
-template <> void NVS::set(const char* key, const int64_t& value)
-{
-    set_i64(key, value);
-}
-
-template <> void NVS::set(const char* key, const char* const& value)
-{
-    set_str(key, value);
-}
-
-bool NVS::exists(const char* key) const
-{
-    int8_t dummy;
-    esp_err_t err = nvs_get_i8(handle, key, &dummy);
-    return (err == ESP_ERR_NVS_TYPE_MISMATCH) || (err == ESP_OK);
+        Serial.printf("Error while setting key '%s'\n", key);
 }
 
 void NVS::init()
@@ -248,11 +162,6 @@ void NVS::init()
     }
     if (err != ESP_OK)
         Serial.printf("Error while initialising NVS flash, code: %d\n", err);
-}
-
-void NVS::deinit()
-{
-    nvs_flash_deinit();
 }
 
 Partition::Partition(const char* name)
@@ -281,7 +190,7 @@ void Partition::loadFirstSector(size_t address)
 
 bool Partition::inSector(size_t address) const
 {
-    return sectorAddress <= address && address < sectorAddress + sectorSize;
+    return (sectorAddress <= address) && (address < (sectorAddress + sectorSize));
 }
 
 void Partition::readSector(size_t sectorAddress)
@@ -315,7 +224,7 @@ void Partition::read(size_t address, void* buffer, size_t size) const
     if (inSector(address))
     {
         size_t toRead = std::min(sectorSize - (address - sectorAddress), size);
-        std::memcpy(buffer, &sectorBuffer.get()[address - sectorAddress], toRead);
+        std::memcpy(buffer, &(*sectorBuffer)[address - sectorAddress], toRead);
         address += toRead;
         buffer = static_cast<uint8_t*>(buffer) + toRead;
         size -= toRead;
@@ -339,7 +248,7 @@ void Partition::write(size_t address, const void* buffer, size_t size)
             readSector(toSectorAddress(address));
 
         size_t toWrite = std::min(sectorSize - (address - sectorAddress), size);
-        std::memcpy(&sectorBuffer.get()[address - sectorAddress], buffer, toWrite);
+        std::memcpy(&(*sectorBuffer)[address - sectorAddress], buffer, toWrite);
         address = (address + toWrite) % getMaxSize();
         buffer = static_cast<const uint8_t*>(buffer) + toWrite;
         size -= toWrite;
