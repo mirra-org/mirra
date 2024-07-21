@@ -114,7 +114,7 @@ template <Log::Level level, class... Ts> void Log::print(Ts&&... args)
     time_t ctime{time(nullptr)};
     tm* time{gmtime(&ctime)};
     size_t size{printPreamble<level>(*time)};
-    size += printv(&buffer[size], sizeof(buffer) - size, std::forward<Ts>(args)...);
+    size += printv(&buffer[size], sizeof(buffer) - size - 1, std::forward<Ts>(args)...);
     buffer[size] = '\n';
     size++;
     file.push(buffer, size);
