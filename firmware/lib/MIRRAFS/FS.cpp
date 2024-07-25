@@ -220,20 +220,19 @@ void Partition::writeSector()
 
 void Partition::read(size_t address, void* buffer, size_t size) const
 {
-    // if address in sector buffer: read straight from it
-    if (inSector(address))
-    {
-        size_t toRead = std::min(sectorSize - (address - sectorAddress), size);
-        std::memcpy(buffer, &(*sectorBuffer)[address - sectorAddress], toRead);
-        address += toRead;
-        buffer = static_cast<uint8_t*>(buffer) + toRead;
-        size -= toRead;
-    }
-    // else (or if not all requested data in sector buffer), read straight from flash
     while (size > 0)
     {
-        size_t toRead = std::min(maxSize - address, size);
-        esp_partition_read(part, address, buffer, size);
+        size_t toRead;
+        if (inSector(address)) // if address in sector buffer: read straight from it
+        {
+            toRead = std::min(sectorSize - (address - sectorAddress), size);
+            std::memcpy(buffer, &(*sectorBuffer)[address - sectorAddress], toRead);
+        }
+        else // else (or if not all requested data in sector buffer), read straight from flash
+        {
+            toRead = std::min((address < sectorAddress ? sectorAddress : maxSize) - address, size);
+            esp_partition_read(part, address, buffer, size);
+        }
         address = (address + toRead) % getMaxSize();
         buffer = static_cast<uint8_t*>(buffer) + toRead;
         size -= toRead;

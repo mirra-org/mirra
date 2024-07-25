@@ -22,11 +22,10 @@ size_t Log::File::cutTail(size_t cutSize)
         }
         else
         {
-            cutSize += std::distance(searchBuffer, found);
-            break;
+            cutSize += std::distance(searchBuffer, found) + 1;
+            return FIFOFile::cutTail(cutSize);
         }
     }
-    return FIFOFile::cutTail(cutSize);
 }
 
 void Log::close()
