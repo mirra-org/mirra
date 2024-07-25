@@ -88,6 +88,8 @@ protected:
             Flags flags;
             SensorValueArray values;
 
+            static constexpr size_t flagsPosition = sizeof(source) + sizeof(time);
+
             static constexpr size_t getSize(Flags flags)
             {
                 return sizeof(source) + sizeof(time) + sizeof(flags) +
@@ -102,6 +104,7 @@ protected:
         using FIFOFile::getSize;
 
         using FIFOFile::read;
+
         class Iterator
         {
             size_t address;

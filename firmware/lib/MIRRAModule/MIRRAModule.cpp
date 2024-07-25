@@ -51,7 +51,7 @@ size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
     size_t removed{0};
     while (removed < cutSize)
     {
-        removed += DataEntry::getSize(read<DataEntry::Flags>(removed + sizeof(MACAddress)));
+        removed += DataEntry::getSize(read<DataEntry::Flags>(removed + DataEntry::flagsPosition));
     }
     reader = reader < removed ? 0 : reader - removed;
     return FIFOFile::cutTail(removed);
@@ -59,7 +59,7 @@ size_t MIRRAModule::SensorFile::cutTail(size_t cutSize)
 
 MIRRAModule::SensorFile::Iterator& MIRRAModule::SensorFile::Iterator::operator++()
 {
-    address += DataEntry::getSize(file->read<DataEntry::Flags>(address + sizeof(MACAddress)));
+    address += DataEntry::getSize(file->read<DataEntry::Flags>(address + DataEntry::flagsPosition));
     return *this;
 }
 
@@ -71,7 +71,7 @@ std::optional<size_t> MIRRAModule::SensorFile::getUnuploadedAddress(size_t index
     {
         if (address == getSize())
             return std::nullopt;
-        DataEntry::Flags flags = read<DataEntry::Flags>(address + sizeof(MACAddress));
+        DataEntry::Flags flags = read<DataEntry::Flags>(address + DataEntry::flagsPosition);
         if (!flags.uploaded)
         {
             if (count == 0)
@@ -106,7 +106,7 @@ void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
 
 void MIRRAModule::SensorFile::setUploaded()
 {
-    DataEntry::Flags flags = read<DataEntry::Flags>(reader + sizeof(MACAddress));
+    DataEntry::Flags flags = read<DataEntry::Flags>(reader + DataEntry::flagsPosition);
     flags.uploaded = true;
     write(reader + sizeof(MACAddress), flags);
 }
@@ -237,7 +237,7 @@ CommandCode MIRRAModule::Commands::printDataRaw()
     {
         for (size_t i = 0; i < entry.getSize(); i++)
         {
-            Serial.printf("%X", reinterpret_cast<uint8_t*>(&entry)[i]);
+            Serial.printf("%02X", reinterpret_cast<uint8_t*>(&entry)[i]);
         }
         Serial.print('\n');
     }
