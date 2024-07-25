@@ -41,8 +41,6 @@ CommandAliasesPair(CommandCode (C::*&& f)(CommandArgs...), Aliases&&... aliases)
 
 struct CommonCommands
 {
-    /// @brief Prints the stored logs to the serial output.
-    CommandCode printLogs();
     /// @brief Echoes the string argument to the UART output. Used for testing CLI functionality.
     /// @param arg The string argument to echo.
     CommandCode echo(const char* arg);
@@ -55,9 +53,7 @@ struct CommonCommands
 
     static constexpr auto getCommands()
     {
-        return std::make_tuple(CommandAliasesPair(&CommonCommands::printLogs, "printlog",
-                                                  "printlogs", "printlogfiles"),
-                               CommandAliasesPair(&CommonCommands::echo, "echo"),
+        return std::make_tuple(CommandAliasesPair(&CommonCommands::echo, "echo"),
                                CommandAliasesPair(&CommonCommands::echoNum, "echonum"),
                                CommandAliasesPair(&CommonCommands::exit, "exit", "close"));
     };

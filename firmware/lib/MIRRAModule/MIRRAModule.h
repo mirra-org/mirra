@@ -47,6 +47,8 @@ protected:
         /// @brief Change the log level.
         /// @param arg String describing the new log level. ("ERROR", "INFO" or "DEBUG")
         CommandCode setLogLevel(const char* arg);
+        /// @brief Prints the stored logs to the serial output.
+        CommandCode printLogs();
         /// @brief Prints all stored data entries to the serial output in human readable format.
         CommandCode printData();
         /// @brief Prints all stored data entries to the serial output as a hex dump.
@@ -61,6 +63,8 @@ protected:
                 CommonCommands::getCommands(),
                 std::make_tuple(
                     CommandAliasesPair(&Commands::setLogLevel, "setlog", "setloglevel"),
+                    CommandAliasesPair(&Commands::printLogs, "printlog", "printlogs",
+                                       "printlogfile"),
                     CommandAliasesPair(&Commands::printData, "printdata", "printdatafile"),
                     CommandAliasesPair(&Commands::printDataRaw, "printdataraw", "printdatahex"),
                     CommandAliasesPair(&Commands::format, "format")));

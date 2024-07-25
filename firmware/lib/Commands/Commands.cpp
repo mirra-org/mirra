@@ -1,7 +1,6 @@
 #include "Commands.h"
 
 #include "FS.h"
-#include "logging.h"
 #include <Arduino.h>
 
 using namespace mirra;
@@ -49,23 +48,6 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
         }
     };
     return std::make_optional(buffer);
-}
-
-CommandCode CommonCommands::printLogs()
-{
-    static constexpr size_t bufferSize{256};
-    char buffer[bufferSize];
-    size_t cursor{0};
-    const Log::File& file = Log::getInstance().file;
-    Serial.printf("Logs: %u out of %u KB.\n", file.getSize() / 1024, file.getMaxSize() / 1024);
-    while (cursor < file.getSize())
-    {
-        file.read(cursor, buffer, bufferSize);
-        Serial.write(buffer, std::min(bufferSize, file.getSize() - cursor));
-        cursor += bufferSize;
-    }
-    Serial.print('\n');
-    return COMMAND_SUCCESS;
 }
 
 CommandCode CommonCommands::echo(const char* arg)
