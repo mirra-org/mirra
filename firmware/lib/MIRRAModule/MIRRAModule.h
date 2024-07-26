@@ -56,6 +56,9 @@ protected:
         /// @brief Formats the module, clearing the entire NVS and filesystem and restarts the
         /// module (effectively a hard reset).
         CommandCode format();
+        /// @brief Spams the logs with a predetermined message ("abcdefghijklmnopqrstuvwxyz")
+        /// @param count Amount of times the message is logged.
+        CommandCode spam(size_t count);
 
         static constexpr auto getCommands()
         {
@@ -67,7 +70,8 @@ protected:
                                        "printlogfile"),
                     CommandAliasesPair(&Commands::printData, "printdata", "printdatafile"),
                     CommandAliasesPair(&Commands::printDataRaw, "printdataraw", "printdatahex"),
-                    CommandAliasesPair(&Commands::format, "format")));
+                    CommandAliasesPair(&Commands::format, "format"),
+                    CommandAliasesPair(&Commands::spam, "spam")));
         }
     };
 

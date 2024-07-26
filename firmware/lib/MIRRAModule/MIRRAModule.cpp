@@ -108,7 +108,7 @@ void MIRRAModule::SensorFile::setUploaded()
 {
     DataEntry::Flags flags = read<DataEntry::Flags>(reader + DataEntry::flagsPosition);
     flags.uploaded = true;
-    write(reader + sizeof(MACAddress), flags);
+    write(reader + DataEntry::flagsPosition, flags);
 }
 
 void MIRRAModule::SensorFile::flush()
@@ -267,5 +267,13 @@ CommandCode MIRRAModule::Commands::format()
     nvs_flash_erase();
     Serial.println("Restarting...");
     ESP.restart();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode MIRRAModule::Commands::spam(size_t count)
+{
+    for (size_t i = 0; i < count; i++)
+        Log::getInstance().file.push("abcdefghijklmnopqrstuvwxyz\n");
+    Serial.println("Spamming done.");
     return COMMAND_SUCCESS;
 }
