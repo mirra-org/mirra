@@ -1,6 +1,8 @@
 #include "config.h"
 #include "gateway.h"
 
+using namespace mirra;
+
 void setup(void)
 {
     constexpr MIRRAModule::MIRRAPins pins = {.bootPin = BOOT_PIN,

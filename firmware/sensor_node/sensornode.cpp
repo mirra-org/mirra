@@ -7,6 +7,8 @@
 #include <SoilTempSensor.h>
 #include <TempHumiSensor.h>
 
+using namespace mirra;
+
 RTC_DATA_ATTR bool initialBoot = true;
 
 RTC_DATA_ATTR std::array<uint32_t, MAX_SENSORS> sensorsNextSampleTimes{0};
@@ -23,11 +25,6 @@ SensorNode::SensorNode(const MIRRAPins& pins) : MIRRAModule(pins)
 {
     if (initialBoot)
     {
-        if (!LittleFS.exists(DATA_FP))
-        {
-            File dataFile{LittleFS.open(DATA_FP, FILE_WRITE, true)};
-            dataFile.close();
-        }
         initSensors();
         clearSensors();
         discovery();
@@ -47,7 +44,8 @@ void SensorNode::wake()
         samplePeriod();
     }
     cTime = rtc.getSysTime();
-    Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ", nextCommTime - cTime, "s");
+    Log::info("Next sample in ", nextSampleTime - cTime, "s, next comm period in ",
+              nextCommTime - cTime, "s");
     Serial.printf("Welcome! This is Sensor Node %s\n", lora.getMACAddress().toString());
     commandEntry.prompt(Commands(this));
     cTime = rtc.getSysTime();
@@ -62,7 +60,8 @@ void SensorNode::discovery()
     Log::info("Sending hello message...");
     lora.sendMessage(Message<HELLO>(lora.getMACAddress(), MACAddress::broadcast));
     Log::debug("Awaiting time config message...");
-    auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, MACAddress::broadcast)};
+    auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS,
+                                                     MACAddress::broadcast)};
     const MACAddress& gatewayMAC{timeConfig->getSource()};
     if (!timeConfig)
     {
@@ -79,7 +78,9 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
 {
     rtc.writeTime(m.getCTime());
     rtc.setSysTime();
-    bool scheduleValid{sampleInterval == m.getSampleInterval() && sampleRounding == m.getSampleRounding() && sampleOffset == m.getSampleOffset()};
+    bool scheduleValid{sampleInterval == m.getSampleInterval() &&
+                       sampleRounding == m.getSampleRounding() &&
+                       sampleOffset == m.getSampleOffset()};
     sampleInterval = m.getSampleInterval() == 0 ? DEFAULT_SAMPLING_INTERVAL : m.getSampleInterval();
     sampleRounding = m.getSampleRounding() == 0 ? DEFAULT_SAMPLING_ROUNDING : m.getSampleRounding();
     sampleOffset = m.getSampleOffset();
@@ -93,8 +94,8 @@ void SensorNode::timeConfig(Message<TIME_CONFIG>& m)
         initSensors();
         clearSensors();
     }
-    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval, ", Max messages: ", maxMessages,
-              ", Gateway MAC: ", gatewayMAC.toString());
+    Log::info("Sample interval: ", sampleInterval, ", Comm interval: ", commInterval,
+              ", Max messages: ", maxMessages, ", Gateway MAC: ", gatewayMAC.toString());
 }
 
 void SensorNode::addSensor(std::unique_ptr<Sensor>&& sensor)
@@ -141,7 +142,7 @@ void SensorNode::clearSensors()
     nSensors = 0;
 }
 
-Message<SENSOR_DATA> SensorNode::sampleAll()
+SensorNode::SensorFile::DataEntry SensorNode::sampleAll()
 {
     Log::info("Sampling all sensors...");
     for (size_t i{0}; i < nSensors; i++)
@@ -149,16 +150,18 @@ Message<SENSOR_DATA> SensorNode::sampleAll()
         Serial.printf("Starting measurement for %u\n", sensors[i]->getTypeTag());
         sensors[i]->startMeasurement();
     }
-    std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
+    SensorFile::DataEntry::SensorValueArray values;
     for (size_t i{0}; i < nSensors; i++)
     {
         Serial.printf("Getting measurement for %u\n", sensors[i]->getTypeTag());
         values[i] = sensors[i]->getMeasurement();
     }
-    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, 0, static_cast<uint8_t>(nSensors), values);
+    return SensorFile::DataEntry{
+        lora.getMACAddress(), 0,
+        SensorFile::DataEntry::Flags{static_cast<uint8_t>(nSensors), false}, values};
 }
 
-Message<SENSOR_DATA> SensorNode::sampleScheduled(uint32_t cTime)
+SensorNode::SensorFile::DataEntry SensorNode::sampleScheduled(uint32_t cTime)
 {
     Log::info("Sampling scheduled sensors...");
     for (size_t i{0}; i < nSensors; i++)
@@ -166,7 +169,7 @@ Message<SENSOR_DATA> SensorNode::sampleScheduled(uint32_t cTime)
         if (sensors[i]->getNextSampleTime() == cTime)
             sensors[i]->startMeasurement();
     }
-    std::array<SensorValue, Message<SENSOR_DATA>::maxNValues> values;
+    SensorFile::DataEntry::SensorValueArray values;
     uint8_t nValues{0};
     for (size_t i{0}; i < nSensors; i++)
     {
@@ -176,7 +179,8 @@ Message<SENSOR_DATA> SensorNode::sampleScheduled(uint32_t cTime)
             nValues++;
         }
     }
-    return Message<SENSOR_DATA>(lora.getMACAddress(), gatewayMAC, cTime, nValues, values);
+    return SensorFile::DataEntry{lora.getMACAddress(), cTime,
+                                 SensorFile::DataEntry::Flags{nValues, false}, values};
 }
 
 void SensorNode::updateSensorsSampleTimes(uint32_t cTime)
@@ -190,14 +194,16 @@ void SensorNode::updateSensorsSampleTimes(uint32_t cTime)
 void SensorNode::samplePeriod()
 {
     initSensors();
-    auto lambdaByNextSampleTime = [](const std::unique_ptr<Sensor>& a, const std::unique_ptr<Sensor>& b)
-    { return a->getNextSampleTime() < b->getNextSampleTime(); };
-    uint32_t cTime{(*std::min_element(sensors.begin(), std::next(sensors.begin(), nSensors), lambdaByNextSampleTime))->getNextSampleTime()};
-    Message<SENSOR_DATA> message{sampleScheduled(cTime)};
-    Log::debug("Constructed Sensor Message with length ", message.getLength());
-    File data = LittleFS.open(DATA_FP, FILE_APPEND);
-    storeSensorData(message, data);
-    data.close();
+    auto lambdaByNextSampleTime = [](const std::unique_ptr<Sensor>& a,
+                                     const std::unique_ptr<Sensor>& b) {
+        return a->getNextSampleTime() < b->getNextSampleTime();
+    };
+    uint32_t cTime{(*std::min_element(sensors.begin(), std::next(sensors.begin(), nSensors),
+                                      lambdaByNextSampleTime))
+                       ->getNextSampleTime()};
+    SensorFile::DataEntry entry{sampleScheduled(cTime)};
+    SensorFile file{};
+    file.push(entry);
     updateSensorsSampleTimes(cTime);
     clearSensors();
 }
@@ -207,66 +213,44 @@ void SensorNode::commPeriod()
     uint32_t cTime{rtc.getSysTime()};
     if (cTime >= nextCommTime + (SENSOR_DATA_TIMEOUT / 1000))
     {
-        Log::error("Too late to start comm period. Skipping and assuming next comm period from given interval.");
+        Log::error("Too late to start comm period. Skipping and assuming next comm period from "
+                   "given interval.");
         while (nextCommTime <= cTime)
             nextCommTime += commInterval;
         return;
     }
     MACAddress _gatewayMAC{gatewayMAC}; // avoid access to slow RTC memory
     Log::info("Communicating with gateway ", _gatewayMAC.toString(), " ...");
-    uint32_t _maxMessages{maxMessages}; // avoid access to slow RTC memory
+    size_t _maxMessages{maxMessages}; // avoid access to slow RTC memory
     Log::debug("Max messages to send: ", _maxMessages);
-    std::vector<Message<SENSOR_DATA>> messages;
-    messages.reserve(_maxMessages);
-    uint32_t messagesFlagPositions[_maxMessages];
-    File dataFile = LittleFS.open(DATA_FP, "r+");
-    while (dataFile.available())
-    {
-        if (messages.size() == _maxMessages)
-            break;
-        uint8_t size{static_cast<uint8_t>(dataFile.read())};
-        uint8_t buffer[size];
-        dataFile.read(buffer, size);
-        if (buffer[0] == 0) // not yet uploaded
-        {
-            messagesFlagPositions[messages.size()] = dataFile.position() - size;
-            Log::debug("Reconstructing message from buffer...");
-            Message<SENSOR_DATA>& message{Message<SENSOR_DATA>::fromData(buffer)};
-            message.setType(SENSOR_DATA);
-            if ((messages.size() == _maxMessages - 1) ||
-                (!dataFile.available())) // imperfect: assumes the last message in the data file is always one that has not been uploaded yet
-            {
-                Log::debug("Last sensor data message...");
-                message.setLast();
-            }
-            messages.push_back(message);
-        }
-    }
-    bool uploadSuccess[messages.size()];
+    SensorFile file{};
     bool firstMessage{true};
-    for (size_t i{0}; i < messages.size(); i++)
-        uploadSuccess[i] = sendSensorMessage(messages[i], _gatewayMAC, firstMessage);
-    for (size_t i{0}; i < messages.size(); i++)
+    for (size_t i{0}; i < _maxMessages; i++)
     {
-        if (uploadSuccess[i])
+        auto entry = file.getUnuploaded(0);
+        if (!entry)
+            break;
+
+        Message<SENSOR_DATA> message{entry->source, _gatewayMAC, entry->time, entry->flags.nValues,
+                                     entry->values};
+        if ((i == _maxMessages - 1) || (file.isLast(0)))
         {
-            dataFile.seek(messagesFlagPositions[i]);
-            dataFile.write(1);
+            Log::debug("Last sensor data message...");
+            message.setLast();
         }
+        if (sendSensorMessage(message, firstMessage))
+            file.setUploaded();
+        firstMessage = false;
     }
-    Log::debug("Messages that were uploaded have been marked as such.");
-    dataFile.seek(0);
-    pruneSensorData(std::move(dataFile), MAX_SENSORDATA_FILESIZE);
 }
 
-bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress const& dest, bool& firstMessage)
+bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, bool firstMessage)
 {
     Log::debug("Sending data message...");
     if (firstMessage)
     {
         lightSleepUntil(nextCommTime);
         lora.sendMessage(message, 0); // gateway should already be listening for first message
-        firstMessage = false;
     }
     else
     {
@@ -275,7 +259,8 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     Log::debug("Awaiting acknowledgement...");
     if (!message.isLast())
     {
-        auto dataAck{lora.receiveMessage<ACK_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS, dest)};
+        auto dataAck{lora.receiveMessage<ACK_DATA>(SENSOR_DATA_TIMEOUT, SENSOR_DATA_ATTEMPTS,
+                                                   message.getDest())};
         if (dataAck)
         {
             return 1;
@@ -288,17 +273,19 @@ bool SensorNode::sendSensorMessage(Message<SENSOR_DATA>& message, MACAddress con
     }
     else
     {
-        auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS, dest)};
+        auto timeConfig{lora.receiveMessage<TIME_CONFIG>(TIME_CONFIG_TIMEOUT, TIME_CONFIG_ATTEMPTS,
+                                                         message.getDest())};
         if (timeConfig)
         {
             this->timeConfig(*timeConfig);
-            lora.sendMessage(Message<ACK_TIME>(lora.getMACAddress(), dest));
+            lora.sendMessage(Message<ACK_TIME>(lora.getMACAddress(), message.getDest()));
             lora.receiveMessage<REPEAT>(TIME_CONFIG_TIMEOUT, 0, gatewayMAC);
             return 1;
         }
         else
         {
-            Log::error("Error while receiving new time config from gateway. Assuming next comm period from given interval.");
+            Log::error("Error while receiving new time config from gateway. Assuming next comm "
+                       "period from given interval.");
             while (nextCommTime <= rtc.getSysTime())
                 nextCommTime += commInterval;
             return 0;
@@ -320,10 +307,10 @@ CommandCode SensorNode::Commands::sample()
 CommandCode SensorNode::Commands::printSample()
 {
     parent->initSensors();
-    Message<SENSOR_DATA> message{parent->sampleAll()};
-    auto& values = message.getValues();
+    SensorFile::DataEntry entry{parent->sampleAll()};
+    const auto& values = entry.values;
     Serial.println("TAG\tVALUE");
-    for (size_t i{0}, nValues{message.getNValues()}; i < nValues; i++)
+    for (size_t i{0}; i < entry.flags.nValues; i++)
     {
         Serial.printf("%u\t%f\n", values[i].typeTag, values[i].value);
     }

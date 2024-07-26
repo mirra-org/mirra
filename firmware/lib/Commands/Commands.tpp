@@ -5,7 +5,9 @@
 #include <Arduino.h>
 #include <charconv>
 
-template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void> CommandEntry::prompt(C&& commands)
+template <class C>
+typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void>
+CommandEntry::prompt(C&& commands)
 {
     if (commandPhaseFlag)
         CommandParser().start<C>(std::forward<C>(commands));
@@ -14,7 +16,9 @@ template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C
     commandPhaseFlag = false;
 }
 
-template <class N> typename std::enable_if_t<std::is_arithmetic_v<N>, std::optional<N>> CommandParser::parseNum(const char* buffer)
+template <class N>
+typename std::enable_if_t<std::is_arithmetic_v<N>, std::optional<N>>
+CommandParser::parseNum(const char* buffer)
 {
     N arith;
     if (std::from_chars(buffer, &buffer[strlen(buffer)], arith).ec == std::errc())
@@ -23,7 +27,8 @@ template <class N> typename std::enable_if_t<std::is_arithmetic_v<N>, std::optio
         return std::nullopt;
 }
 
-template <class N> typename std::enable_if_t<std::is_arithmetic_v<N>, std::optional<N>> CommandParser::readNum()
+template <class N>
+typename std::enable_if_t<std::is_arithmetic_v<N>, std::optional<N>> CommandParser::readNum()
 {
     auto line{readLine()};
     if (!line)
@@ -32,7 +37,8 @@ template <class N> typename std::enable_if_t<std::is_arithmetic_v<N>, std::optio
 }
 
 template <class T>
-typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<std::decay_t<T>, char*>, bool> CommandParser::editValue(T& value, bool skipWhenEmpty)
+typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<std::decay_t<T>, char*>, bool>
+CommandParser::editValue(T& value, bool skipWhenEmpty)
 {
     while (true)
     {
@@ -63,13 +69,16 @@ typename std::enable_if_t<std::is_arithmetic_v<T> || std::is_same_v<std::decay_t
             }
             else
             {
-                Serial.printf("Could not parse input '%s' to valid numeric type. Please retry: \n", buffer->data());
+                Serial.printf("Could not parse input '%s' to valid numeric type. Please retry: \n",
+                              buffer->data());
             }
         }
     }
 }
 
-template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void> CommandParser::start(C&& commands)
+template <class C>
+typename std::enable_if_t<std::is_base_of_v<CommonCommands, C>, void>
+CommandParser::start(C&& commands)
 {
     Serial.println("COMMAND PHASE");
     while (true)
@@ -91,7 +100,9 @@ template <class C> typename std::enable_if_t<std::is_base_of_v<CommonCommands, C
     }
 }
 
-template <class Tup, size_t I = 0> CommandCode CommandParser::parseArgs(Tup& argsTuple, const std::array<char*, std::tuple_size_v<Tup>>& buffers)
+template <class Tup, size_t I = 0>
+CommandCode CommandParser::parseArgs(Tup& argsTuple,
+                                     const std::array<char*, std::tuple_size_v<Tup>>& buffers)
 {
     if constexpr (I >= std::tuple_size_v<Tup>)
     {
@@ -150,7 +161,8 @@ template <class C, size_t I = 0> CommandCode CommandParser::parseLine(char* line
                     commandArgBuffer = strtok(nullptr, " \r\n");
                     if (commandArgBuffer == nullptr)
                     {
-                        Serial.printf("Command '%s' expects %u argument(s) but received fewer.\n", alias, pair.getCommandArgCount());
+                        Serial.printf("Command '%s' expects %u argument(s) but received fewer.\n",
+                                      alias, pair.getCommandArgCount());
                         return COMMAND_NOT_FOUND;
                     }
                 }
@@ -159,7 +171,8 @@ template <class C, size_t I = 0> CommandCode CommandParser::parseLine(char* line
                     return COMMAND_ERROR;
                 }
                 // implement argument parsing here
-                return std::apply(function, std::tuple_cat(std::forward_as_tuple(commands), commandArgs));
+                return std::apply(function,
+                                  std::tuple_cat(std::forward_as_tuple(commands), commandArgs));
             }
 
         return parseLine<C, I + 1>(command, std::forward<C>(commands));

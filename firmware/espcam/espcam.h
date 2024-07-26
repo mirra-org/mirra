@@ -7,8 +7,7 @@ class ESPCam
 {
 public:
     struct Commands : CommonCommands
-    {
-    };
+    {};
 };
 
 #endif

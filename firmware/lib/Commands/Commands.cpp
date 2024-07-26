@@ -1,9 +1,13 @@
 #include "Commands.h"
 
+#include "FS.h"
 #include <Arduino.h>
-#include <LittleFS.h>
 
-CommandEntry::CommandEntry(uint8_t checkPin, bool invert) : commandPhaseFlag{invert != static_cast<bool>(digitalRead(checkPin))} {}
+using namespace mirra;
+
+CommandEntry::CommandEntry(uint8_t checkPin, bool invert)
+    : commandPhaseFlag{invert != static_cast<bool>(digitalRead(checkPin))}
+{}
 
 std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::readLine()
 {
@@ -46,95 +50,6 @@ std::optional<std::array<char, CommandParser::lineMaxLength>> CommandParser::rea
     return std::make_optional(buffer);
 }
 
-CommandCode CommonCommands::listFiles()
-{
-    File root{LittleFS.open("/")};
-    if (!root)
-    {
-        Serial.println("Could not open filesystem root.");
-        return COMMAND_ERROR;
-    }
-    File file{root.openNextFile()};
-    while (file)
-    {
-        Serial.printf("%s\t%uB\n", file.path(), file.size());
-        file.close();
-        file = root.openNextFile();
-    }
-    file.close();
-    root.close();
-    return COMMAND_SUCCESS;
-}
-
-CommandCode printFileImpl(const char* filename, bool hex)
-{
-    if (!LittleFS.exists(filename))
-    {
-        Serial.printf("File '%s' does not exist.\n", filename);
-        return COMMAND_ERROR;
-    }
-    File file{LittleFS.open(filename)};
-    if (!file)
-    {
-        Serial.printf("Error while opening file '%s'\n", filename);
-        return COMMAND_ERROR;
-    }
-    Serial.printf("%s with size %u bytes\n", filename, file.size());
-    if (hex)
-    {
-        while (file.available())
-        {
-            Serial.printf("%X", file.read());
-        }
-    }
-    else
-    {
-        while (file.available())
-        {
-            Serial.write(file.read());
-        }
-    }
-    Serial.print('\n');
-    file.close();
-    Serial.flush();
-    return COMMAND_SUCCESS;
-}
-
-CommandCode CommonCommands::printFile(const char* filename) { return printFileImpl(filename, false); }
-
-CommandCode CommonCommands::printFileHex(const char* filename) { return printFileImpl(filename, true); }
-
-CommandCode CommonCommands::removeFile(const char* filename)
-{
-    if (!LittleFS.remove(filename))
-    {
-        Serial.printf("Could not delete the file '%s' because it does not exist.\n", filename);
-        return COMMAND_ERROR;
-    }
-    return COMMAND_SUCCESS;
-}
-
-CommandCode CommonCommands::touchFile(const char* filename)
-{
-    File touch{LittleFS.open(filename, "w", true)};
-    if (!touch)
-    {
-        Serial.printf("Could not create file '%s'.\n", filename);
-        return COMMAND_ERROR;
-    }
-    touch.close();
-    return COMMAND_SUCCESS;
-}
-
-CommandCode CommonCommands::format()
-{
-    Serial.println("Formatting flash memory (this can take some time)...");
-    LittleFS.format();
-    Serial.println("Restarting ...");
-    ESP.restart();
-    return COMMAND_SUCCESS;
-}
-
 CommandCode CommonCommands::echo(const char* arg)
 {
     Serial.print(arg);
@@ -149,4 +64,7 @@ CommandCode CommonCommands::echoNum(int arg)
     return COMMAND_SUCCESS;
 }
 
-CommandCode CommonCommands::exit() { return COMMAND_EXIT; }
+CommandCode CommonCommands::exit()
+{
+    return COMMAND_EXIT;
+}
