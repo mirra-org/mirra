@@ -36,7 +36,8 @@ public:
         NVS* nvs;
         T cachedValue;
 
-        Value(const char* key, NVS* nvs) : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key)} {}
+        Value(const char* key, NVS* nvs) : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key).value()}
+        {}
         Value(const char* key, NVS* nvs, const T& defaultValue)
             : key{key}, nvs{nvs}, cachedValue{nvs->get<T>(key).value_or(defaultValue)}
         {}
@@ -151,7 +152,7 @@ protected:
 public:
     FIFOFile(FIFOFile&&) = default;
     FIFOFile& operator=(FIFOFile&&) = default;
-    virtual ~FIFOFile(){};
+    virtual ~FIFOFile() {};
 
     size_t getSize() const { return size; }
     size_t freeSpace() const;
