@@ -55,6 +55,8 @@ public:
     /// @brief Wait until receive/send has been successfully completed or until timeout.
     /// @return True when message succesfully sent/received, false if timed out.
     bool wait();
+
+    friend class Protocol;
 };
 
 #endif
