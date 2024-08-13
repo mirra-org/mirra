@@ -6,7 +6,7 @@ Address::Address(const char* string) { sscanf(string, "%04X:%04X", &gateway, &no
 
 char* Address::toString(char* string) const
 {
-    snprintf(string, Address::stringLength, "%04X:%04X", gateway, node);
+    snprintf(string, Address::stringLength, "%04X:%02X", gateway, node);
     return string;
 }
 

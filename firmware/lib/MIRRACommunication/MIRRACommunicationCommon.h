@@ -24,13 +24,13 @@ struct Address
     /// @param node The node ID.
     constexpr Address(GatewayID gateway, NodeID node) : gateway{gateway}, node{node} {}
     /// @brief Constructs a MIRRA address from a string.
-    /// @param string The hex string from which to construct the MIRRA address in the "0000:0000" format.
+    /// @param string The hex string from which to construct the MIRRA address in the "0000:00" format.
     constexpr Address(const char* string);
 
     bool operator==(const Address& other) const { return this->gateway == other.gateway && this->node == other.node; }
     bool operator!=(const Address& other) const { return !(*this == other); }
 
-    /// @brief Gives a hex string representation of this MAC address.
+    /// @brief Gives a hex string representation of this MIRRA address in the "0000:00" format.
     /// @param string Buffer to write the resulting string to. By default, this uses a static buffer.
     /// @return The buffer to which the string was written.
     char* toString(char* string = strBuffer) const;
@@ -49,7 +49,7 @@ enum MessageType : uint8_t
     HELLO = 0,
     CONFIG = 1,
     DATA = 2,
-    ACK = 3,
+    ACK = 6,
     ANY = 7,
 };
 
@@ -135,11 +135,11 @@ template <> struct MessageBody<DATA>
     /// @brief The maximum amount of sensor values that can be held in a single sensor data message.
     static constexpr size_t maxNValues{(Message<ANY>::maxSize - sizeof(MessageHeader) - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue)};
 
-    class SensorValues : public std::array<SensorValue, maxNValues>
+    class SensorValueArray : public std::array<SensorValue, maxNValues>
     {
     } __attribute__((packed));
 
-    SensorValues values;
+    SensorValueArray values;
 
     constexpr MessageBody(uint32_t time, uint8_t nValues) : time{time}, nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{} {};
 
@@ -147,9 +147,7 @@ template <> struct MessageBody<DATA>
     constexpr size_t getSize() const { return sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue); };
 } __attribute__((packed));
 
-constexpr size_t maxWindowSize{8};
-
-class AckSet : public std::bitset<maxWindowSize>
+class AckSet : public std::bitset<32>
 {
 } __attribute__((packed));
 
