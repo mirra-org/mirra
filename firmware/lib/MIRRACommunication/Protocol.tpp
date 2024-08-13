@@ -10,6 +10,6 @@ template <MessageType T, class... Args> void Window::emplace(Args&&... args)
 
 template <MessageType T, class... Args> void Protocol::sendMessage(Args&&... args) { sendWind.emplace<T>(args...); }
 
-template <MessageType T> void Protocol::sendMessage(Message<T>&& message) { sendWind.push(message.toData(), message.getSize(), sendWind.getCount()); }
+template <MessageType T> void Protocol::sendMessage(Message<T>&& message) { sendWind.push(message.toData(), message.getSize()); }
 
 #endif

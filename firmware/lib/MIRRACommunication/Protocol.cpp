@@ -9,9 +9,9 @@ Window::Window(size_t size)
     messages.fill(nullptr);
 }
 
-void Window::push(uint8_t* buffer, size_t size) { std::copy(buffer, buffer + size, prepush(size)); }
+void Window::push(uint8_t* buffer, size_t size) { std::copy(buffer, buffer + size, push(size)); }
 
-uint8_t* Window::prepush(size_t size)
+uint8_t* Window::push(size_t size)
 {
     uint8_t* oldWriteHead = writeHead;
     messages[count] = writeHead;
@@ -21,7 +21,7 @@ uint8_t* Window::prepush(size_t size)
     return oldWriteHead;
 }
 
-void Window::depush()
+void Window::pop()
 {
     count--;
     writeHead -= sizes[count];
@@ -38,12 +38,18 @@ void Window::clear()
 bool Protocol::send(size_t index)
 {
     uint8_t* messageBytes = sendWind[index];
+    size_t messageSize = sendWind.getSize(index);
     MessageHeader* messageHeader = reinterpret_cast<MessageHeader*>(messageBytes);
     messageHeader->addr = this->addr;
-    messageHeader->seq = sendWind.getCount() - 1;
-    if (!lora.sendPacket(messageBytes, sendWind.getSize(index)))
+    messageHeader->seq = index;
+    if (sendWind.getCount() != index)
+        messageHeader->last = true;
+    if (!lora.sendPacket(messageBytes, messageSize))
         return false;
-    return lora.wait();
+    if (!lora.wait())
+        return false;
+    timeBudgetMs -= lora.getTimeOnAir(messageSize); // todo: use timer to accurately reduce budget
+    return true;
 }
 
 bool Protocol::receive(size_t messageSize, MessageType type)
@@ -56,8 +62,7 @@ bool Protocol::receive(size_t messageSize, MessageType type)
         }
     }
     uint32_t timeoutMs = lora.getTimeOnAir(messageSize) * 2;
-    bool receiving = true;
-    while (receiving)
+    while (true)
     {
         if (!lora.receivePacket(timeoutMs))
         {
@@ -66,34 +71,35 @@ bool Protocol::receive(size_t messageSize, MessageType type)
         if (!lora.wait())
         {
         }
-        timeBudgetMs -= lora.getTimeOnAir(lora.getPacketLength());
-        uint8_t* recvWindowWriteHead = recvWind.prepush(lora.getPacketLength());
+        timeBudgetMs -= lora.getTimeOnAir(lora.getPacketLength()); // todo: use timer to accurately reduce budget
+        uint8_t* recvWindowWriteHead = recvWind.push(lora.getPacketLength());
         if (!lora.readPacket(recvWindowWriteHead))
         {
-            recvWind.depush();
+            recvWind.pop();
             continue;
         }
         MessageHeader* header = reinterpret_cast<MessageHeader*>(recvWindowWriteHead);
         if (header->addr.gateway != this->addr.gateway) // message is either from another MIRRA set or another source entirely
         {
-            recvWind.depush();
+            recvWind.pop();
             continue;
         }
         if (header->isType(MessageType::ACK))
         {
-            sendWind.getAcks() = reinterpret_cast<Message<ACK>*>(recvWindowWriteHead)->body.acks;
-            recvWind.depush();
+            sendWind.getAcks() = reinterpret_cast<Message<ACK>*>(header)->body.acks;
+            recvWind.pop();
             return receive(messageSize, type);
         }
         if (!header->isType(type) && type != MessageType::ANY) // message does not have desired type
         {
-            recvWind.depush();
+            recvWind.pop();
             return false;
         }
 
+        recvWind.getAcks()[header->seq] = true;
         if (header->last)
         {
-            receiving = false;
+            return true;
         }
     }
 }
