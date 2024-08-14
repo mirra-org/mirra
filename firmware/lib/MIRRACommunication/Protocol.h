@@ -14,30 +14,34 @@ namespace mirra::communication
 {
 class Window
 {
+public:
     static constexpr size_t maxWindowSize{8};
-    std::vector<uint8_t> buffer;
+    static constexpr size_t bufferSize{maxWindowSize * Message<ANY>::maxSize};
+
+private:
+    std::unique_ptr<std::array<uint8_t, bufferSize>> buffer;
     AckSet acks{};
-    std::array<uint8_t*, maxWindowSize> messages;
+    std::array<uint8_t*, maxWindowSize> messages{0};
     std::array<size_t, maxWindowSize> sizes{0};
     uint8_t* writeHead;
-    uint8_t count{0};
 
 public:
-    Window(size_t size);
+    Window();
 
     template <MessageType T, class... Args> void emplace(Args&&... args);
-    uint8_t* push(size_t size);
-    void push(uint8_t* buffer, size_t size);
 
-    void pop();
+    void push(size_t size, size_t index);
+    void push(uint8_t* buffer, size_t size, size_t index);
+
     void clear();
 
-    uint8_t* operator[](uint8_t index) { return messages[index]; };
-    size_t getSize(uint8_t index) { return sizes[index]; }
+    bool hasMessage(size_t index) const { return sizes[index] != 0; }
+    uint8_t* operator[](size_t index) const { return messages[index]; }
+    MessageHeader& getMessageHeader(size_t index) { return *reinterpret_cast<MessageHeader*>(messages[index]); };
+    size_t getSize(size_t index) const { return sizes[index]; }
 
-    uint8_t* getWriteHead() { return writeHead; }
+    uint8_t* getWriteHead() const { return writeHead; }
     AckSet& getAcks() { return acks; }
-    const uint8_t getCount() const { return count; }
 };
 
 class Protocol
