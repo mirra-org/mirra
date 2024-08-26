@@ -86,6 +86,9 @@ public:
         return Value<T>(key, this, defaultValue);
     }
 
+    void eraseKey(const char* key);
+    template <class T> void eraseValue(const Value<T>& value) { return eraseKey(value->key); }
+
     Iterator begin() const { return Iterator(name); };
     Iterator end() const { return Iterator(nullptr); };
 

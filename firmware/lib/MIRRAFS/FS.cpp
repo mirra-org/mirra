@@ -151,6 +151,12 @@ void NVS::set_blob(const char* key, const void* value, size_t size)
         Serial.printf("Error while setting key '%s'\n", key);
 }
 
+void NVS::eraseKey(const char* key)
+{
+    if (nvs_erase_key(handle, key) != ESP_OK)
+        Serial.printf("Error while erasing key '%s'\n", key);
+}
+
 void NVS::init()
 {
     esp_err_t err = nvs_flash_init();
