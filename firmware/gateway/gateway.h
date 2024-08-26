@@ -131,14 +131,13 @@ private:
     /// there is a response.
     void discovery();
 
-    /// @brief Imports the nodes stored on the local filesystem. Used to retain the Nodes objects
-    /// through deep sleep.
-    void nodesFromFile();
-    /// @brief Updates the nodes stored on the local filesystem. Used to retain the Nodes objects
-    /// through deep sleep.
-    void updateNodesFile();
+    /// @brief Imports the nodes stored on the local NVS filesystem. Used to retain the Nodes
+    /// objects through deep sleep.
+    void loadNodes();
+    /// @brief Updates the nodes stored on the local NVS filesystem. Used to retain the Nodes
+    /// objects through deep sleep.
+    void storeNodes();
 
-    void removeNode(Node&){};
 
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();

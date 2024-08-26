@@ -64,7 +64,7 @@ Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins)
         Commands(this).rtcUpdateTime();
         initialBoot = false;
     }
-    nodesFromFile();
+    loadNodes();
 }
 
 void Gateway::wake()
@@ -150,19 +150,17 @@ void Gateway::discovery()
         {
             Log::error("Error while receiving ack to time config message from ",
                        candidate.toString(), ". Aborting discovery.");
-            if (duplicate)
-                removeNode(duplicate->get());
-            else
+            if (!duplicate)
                 nodes.pop_back();
             return;
         }
 
         Log::info("Node ", timeAck->getSource().toString(), " has been registered.");
-        updateNodesFile();
+        storeNodes();
     }
 }
 
-void Gateway::nodesFromFile()
+void Gateway::loadNodes()
 {
     Log::debug("Recovering nodes from file...");
     fs::NVS nvsNodes{"nodes"};
@@ -173,7 +171,7 @@ void Gateway::nodesFromFile()
     Log::debug(nodes.size(), " nodes found in NVS.");
 }
 
-void Gateway::updateNodesFile()
+void Gateway::storeNodes()
 {
     fs::NVS nvsNodes{"nodes"};
     for (const Node& node : nodes)
@@ -212,7 +210,7 @@ void Gateway::commPeriod()
     }
     else
     {
-        updateNodesFile();
+        storeNodes();
     }
     SensorFile file{};
     for (const Message<SENSOR_DATA>& m : data)
