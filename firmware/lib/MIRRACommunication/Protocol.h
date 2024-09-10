@@ -61,6 +61,7 @@ private:
         : addr{addr}, lora{lora}, timeBudgetMs{timeBudgetMs}, repeats{repeats} {};
 
     bool send(size_t index);
+    bool sendAcks();
     bool receive(size_t messageSize, MessageType type);
 
 public:

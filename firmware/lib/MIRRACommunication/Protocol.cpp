@@ -25,6 +25,17 @@ void Window::clear()
     acks.reset();
 }
 
+bool Protocol::sendAcks()
+{
+    Message<ACK> ackMessage(recvWind.getAcks());
+    ackMessage.header.addr = this->addr;
+    if (!lora.sendPacket(ackMessage.toData(), ackMessage.getSize()))
+        return false;
+    if (!lora.wait())
+        return false;
+    timeBudgetMs -= lora.getTimeOnAir(ackMessage.getSize()) / 1000; // todo: use timer to accurately reduce budget
+}
+
 bool Protocol::send(size_t index)
 {
     MessageHeader& messageHeader = sendWind.getMessageHeader(index);
@@ -38,7 +49,7 @@ bool Protocol::send(size_t index)
         return false;
     if (!lora.wait())
         return false;
-    timeBudgetMs -= lora.getTimeOnAir(messageSize); // todo: use timer to accurately reduce budget
+    timeBudgetMs -= lora.getTimeOnAir(messageSize) / 1000; // todo: use timer to accurately reduce budget
     return true;
 }
 
@@ -51,19 +62,18 @@ bool Protocol::receive(size_t messageSize, MessageType type)
             send(i);
         }
     }
-    uint32_t timeoutMs = 1000 + (2 * lora.getTimeOnAir(messageSize));
+    uint32_t timeoutMs = 1000 + (2 * lora.getTimeOnAir(messageSize) / 1000);
     while (true)
     {
         if (!lora.receivePacket(timeoutMs))
         {
             return false;
         }
-        if (!lora.wait())
+        bool timedOut = !lora.wait();
+        timeBudgetMs -= lora.getTimeOnAir(lora.getPacketLength()) / 1000; // todo: use timer to accurately reduce budget
+        if (timedOut || !lora.readPacket(recvWind.getWriteHead()))
         {
-        }
-        timeBudgetMs -= lora.getTimeOnAir(lora.getPacketLength()); // todo: use timer to accurately reduce budget
-        if (!lora.readPacket(recvWind.getWriteHead()))
-        {
+            sendAcks();
             continue;
         }
         MessageHeader* header = reinterpret_cast<MessageHeader*>(recvWind.getWriteHead());
