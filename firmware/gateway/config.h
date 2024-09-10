@@ -12,10 +12,9 @@
 // MQTT settings
 #define MQTT_SERVER "mirra.ugent.be"
 #define MQTT_PORT 1883
-#define MQTT_IDENTITY 0
-#define MQTT_PSK 0
+#define MQTT_PSK ""
 #define TOPIC_PREFIX                                                                               \
-    "fornalab" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
+    "mirra" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 #define MQTT_ATTEMPTS 5   // amount of attempts made to connect to MQTT server
 #define MQTT_TIMEOUT 1000 // ms, timeout to connect with MQTT server
 #define MAX_MQTT_ERRORS                                                                            \
@@ -30,8 +29,8 @@
 
 #define WAKE_BEFORE_COMM_PERIOD                                                                    \
     5 // s, time before comm period when gateway should wake from deep sleep
-#define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
-#define LISTEN_COMM_PERIOD(X) ((X)-COMM_PERIOD_PADDING)
+#define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
+#define LISTEN_COMM_PERIOD(X) ((X) - COMM_PERIOD_PADDING)
 
 #define UPLOAD_EVERY                                                                               \
     3 // amount of times the gateway will communicate with the nodes before uploading data to the

@@ -138,7 +138,6 @@ private:
     /// objects through deep sleep.
     void storeNodes();
 
-
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();
     /// @brief Retrieves, if possible, the next scheduled start time for a node communication

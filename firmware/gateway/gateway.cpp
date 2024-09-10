@@ -1,4 +1,5 @@
 #include "gateway.h"
+#include "HTTPClient.h"
 #include <cstring>
 #include <esp_sntp.h>
 
@@ -38,7 +39,6 @@ RTC_DATA_ATTR char pass[33]{WIFI_PASS};
 
 RTC_DATA_ATTR char mqttServer[65]{MQTT_SERVER};
 RTC_DATA_ATTR uint16_t mqttPort{MQTT_PORT};
-RTC_DATA_ATTR char mqttIdentity[6]{MQTT_IDENTITY};
 RTC_DATA_ATTR char mqttPsk[65]{MQTT_PSK};
 
 RTC_DATA_ATTR uint32_t sampleInterval{DEFAULT_SAMPLE_INTERVAL};
@@ -351,7 +351,7 @@ void Gateway::uploadPeriod()
     SensorFile file{};
     if (WiFi.status() == WL_CONNECTED)
     {
-        MQTTClient mqtt{mqttServer, mqttPort, mqttIdentity, mqttPsk};
+        MQTTClient mqtt{mqttServer, mqttPort, lora.getMACAddress().toString(), mqttPsk};
         size_t nErrors{0}; // amount of errors while uploading
         size_t messagesPublished{0};
         while (true)
@@ -526,34 +526,60 @@ CommandCode Gateway::Commands::changeServer()
     if (!CommandParser::editValue(portBuffer))
         return COMMAND_ERROR;
 
-    char identityBuffer[sizeof(mqttIdentity)];
-    strncpy(identityBuffer, mqttIdentity, sizeof(mqttIdentity));
-    Serial.printf(
-        "Enter the gateway's identity to authenticate with the server (current: '%s') :\n",
-        identityBuffer);
-    if (!CommandParser::editValue(identityBuffer))
-        return COMMAND_ERROR;
-
+    Serial.printf("Start the gateway setup on the web portal and enter the access code:\n");
     char pskBuffer[sizeof(mqttPsk)];
-    strncpy(pskBuffer, mqttPsk, sizeof(mqttPsk));
-    Serial.printf("Enter the gateway's PSK to authenticate with the server (current: '%s') :\n",
-                  pskBuffer);
-    if (!CommandParser::editValue(pskBuffer))
+    auto code{CommandParser::readLine()};
+    if (!code)
         return COMMAND_ERROR;
-
-    MQTTClient client{serverBuffer, portBuffer, identityBuffer, pskBuffer};
-    if (client.clientConnect(parent->lora.getMACAddress()))
     {
-        strncpy(mqttServer, serverBuffer, sizeof(mqttServer));
-        mqttPort = portBuffer;
-        strncpy(mqttIdentity, identityBuffer, sizeof(mqttIdentity));
-        strncpy(mqttPsk, pskBuffer, sizeof(mqttPsk));
-        Serial.println("Connection to provided server successful. Configuration has been changed.");
-        Serial.printf("mqttServer: %s\n", mqttServer);
-        Serial.printf("mqttPort: %u\n", mqttPort);
-        Serial.printf("mqttIdentity: %s\n", mqttIdentity);
-        Serial.printf("mqttPsk: %s\n", mqttPsk);
-        return COMMAND_SUCCESS;
+        WiFiClientSecure client;
+        client.setInsecure();
+        HTTPClient https;
+        https.addHeader("mirra-access-code", code->data());
+        char url[128];
+        snprintf(url, sizeof(url), "%s%s%s", "https://", serverBuffer, "/psk/",
+                 parent->lora.getMACAddress().toString());
+        if (!https.begin(client, url))
+            Serial.printf("Error while connecting to '%s'. Ensure the address is correct.\n", url);
+        int status = https.GET();
+        if (status == HTTP_CODE_OK)
+        {
+            strncpy(pskBuffer, https.getString().c_str(), sizeof(mqttPsk));
+            https.end();
+        }
+        else
+        {
+            https.end();
+            if (status == HTTP_CODE_UNAUTHORIZED)
+            {
+                Serial.printf("Access code '%s' was incorrect.\n", code->data());
+            }
+            else
+            {
+                Serial.printf("Error while submitting access code. Error code: %i. Aborting server "
+                              "linking.\n",
+                              status);
+            }
+            Serial.println("Fallback: enter PSK manually (64 hexadecimal characters):");
+            if (!CommandParser::editValue(pskBuffer))
+                return COMMAND_ERROR;
+        }
+    }
+    {
+        MQTTClient client{serverBuffer, portBuffer, parent->lora.getMACAddress().toString(),
+                          pskBuffer};
+        if (client.clientConnect(parent->lora.getMACAddress()))
+        {
+            strncpy(mqttServer, serverBuffer, sizeof(mqttServer));
+            mqttPort = portBuffer;
+            strncpy(mqttPsk, pskBuffer, sizeof(mqttPsk));
+            Serial.println(
+                "Connection to provided server successful. Configuration has been changed.");
+            Serial.printf("mqttServer: %s\n", mqttServer);
+            Serial.printf("mqttPort: %u\n", mqttPort);
+            Serial.printf("mqttPsk: %s\n", mqttPsk);
+            return COMMAND_SUCCESS;
+        }
     }
     Serial.println("Could not connect to the provided server. Configuration has not been changed.");
     return COMMAND_SUCCESS;
