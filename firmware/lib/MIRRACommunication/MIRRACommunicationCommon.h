@@ -65,7 +65,8 @@ struct MessageHeader
     /// @brief The source MAC address of the message.
     Address addr;
 
-    constexpr MessageHeader(MessageType type, bool last, uint8_t seq, Address addr) : type{type}, last{last}, seq{seq}, addr{addr} {};
+    constexpr MessageHeader(MessageType type, uint8_t seq, Address addr) : type{type}, last{false}, seq{seq}, addr{addr} {};
+    constexpr MessageHeader(MessageType type) : MessageHeader(type, 0, Address()) {}
     constexpr bool isType(MessageType type) const { return this->type == type; }
     /// @brief Forcibly sets the type of this message.
     /// @param type The type to force-set this message to.
@@ -89,10 +90,7 @@ public:
     MessageBody<T> body;
 
 private:
-    template <class... Ts, class = decltype(MessageBody(std::declval<Ts>()...))>
-    constexpr Message(bool last, uint8_t seq, Address addr, Ts&&... args) : header{T, last, seq, addr}, body{std::forward<Ts>(args)...}
-    {
-    }
+    template <class... Ts, class = decltype(MessageBody(std::declval<Ts>()...))> constexpr Message(Ts&&... args) : header{T}, body{std::forward<Ts>(args)...} {}
 
     /// @return Whether the message's type flag matches the desired type.
     constexpr bool isValid() const { return header.isType(T); }
@@ -110,7 +108,7 @@ public:
     /// @return The message size in bytes.
     constexpr size_t getSize() const { return sizeof(header) + body.getSize(); }
 
-    friend class MIRRAProtocol;
+    friend class Protocol;
 } __attribute__((packed));
 
 template <> struct MessageBody<CONFIG>
