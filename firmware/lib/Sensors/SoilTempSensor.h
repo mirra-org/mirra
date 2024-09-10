@@ -23,7 +23,7 @@ public:
     {}
     void startMeasurement();
     SensorValue getMeasurement();
-    uint32_t getTypeTag() const { return SOIL_TEMPERATURE_KEY; };
+    uint8_t getTypeTag() const { return SOIL_TEMPERATURE_KEY; };
 };
 
 #endif

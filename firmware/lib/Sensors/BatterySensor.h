@@ -15,6 +15,6 @@ public:
     void setup();
     void startMeasurement();
     SensorValue getMeasurement();
-    uint32_t getTypeTag() const { return BATTERY_KEY; };
+    uint8_t getTypeTag() const { return BATTERY_KEY; };
 };
 #endif

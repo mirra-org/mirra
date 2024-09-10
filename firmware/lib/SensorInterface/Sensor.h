@@ -6,7 +6,7 @@
 
 struct SensorValue
 {
-    uint32_t typeTag : 24;
+    uint8_t typeTag;
     uint8_t instanceTag;
     float value;
 
@@ -15,7 +15,7 @@ struct SensorValue
     /// @param typeTag Type ID of the sensor.
     /// @param instanceTag Instance ID of the sensor.
     /// @param value Concrete value.
-    SensorValue(uint32_t typeTag, u_int8_t instanceTag, float value)
+    SensorValue(uint8_t typeTag, u_int8_t instanceTag, float value)
         : typeTag{typeTag}, instanceTag{instanceTag}, value{value} {};
 } __attribute__((packed));
 
@@ -29,7 +29,7 @@ public:
     // @return The measured value.
     virtual SensorValue getMeasurement() = 0;
     /// @return The sensor's type ID.
-    virtual uint32_t getTypeTag() const = 0;
+    virtual uint8_t getTypeTag() const = 0;
     uint8_t getInstanceTag() { return instanceTag; }
     /// @return The sensor's name.
     virtual const char* getName() const { return "Unnamed Sensor"; };

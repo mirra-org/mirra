@@ -18,7 +18,7 @@ public:
     {
         return SensorValue(getTypeTag(), getInstanceTag(), static_cast<float>(analogRead(pin)));
     };
-    uint32_t getTypeTag() const { return SOIL_MOISTURE_KEY; };
+    uint8_t getTypeTag() const { return SOIL_MOISTURE_KEY; };
 };
 
 #endif

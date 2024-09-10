@@ -15,6 +15,6 @@ public:
     {
         return SensorValue(getTypeTag(), getInstanceTag(), static_cast<float>(rand() % 101));
     };
-    uint32_t getTypeTag() const { return RANDOM_KEY; }
+    uint8_t getTypeTag() const { return RANDOM_KEY; }
 };
 #endif
