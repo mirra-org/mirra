@@ -366,7 +366,7 @@ void Gateway::uploadPeriod()
             {
                 if (mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry->getSize()))
                 {
-                    Log::debug("MQTT message succesfully published.");
+                    Log::debug("MQTT message successfully published.");
                     file.setUploaded();
                     messagesPublished++;
                 }
