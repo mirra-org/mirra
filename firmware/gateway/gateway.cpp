@@ -429,13 +429,13 @@ CommandCode Gateway::Commands::changeWifi()
     strncpy(ssidBuffer, ssid, sizeof(ssid));
     Serial.printf("Enter WiFi SSID (current: '%s') :\n", ssidBuffer);
     if (!CommandParser::editValue(ssidBuffer))
-        return COMMAND_ERROR;
+        return COMMAND_TIMEOUT;
 
     char passBuffer[sizeof(pass)];
     strncpy(passBuffer, ssid, sizeof(pass));
     Serial.println("Enter WiFi password:");
     if (!CommandParser::editValue(passBuffer))
-        return COMMAND_ERROR;
+        return COMMAND_TIMEOUT;
 
     parent->wifiConnect(ssidBuffer, passBuffer);
     if (WiFi.status() == WL_CONNECTED)
@@ -444,12 +444,13 @@ CommandCode Gateway::Commands::changeWifi()
         strncpy(ssid, ssidBuffer, sizeof(ssid));
         strncpy(pass, passBuffer, sizeof(pass));
         Serial.println("WiFi connected! This WiFi network has been set as the default.");
+        return COMMAND_SUCCESS;
     }
     else
     {
         Serial.println("Could not connect to the supplied WiFi network.");
+        return COMMAND_ERROR;
     }
-    return COMMAND_SUCCESS;
 }
 
 CommandCode Gateway::Commands::rtcUpdateTime()
@@ -493,7 +494,7 @@ CommandCode Gateway::Commands::rtcSet()
     Serial.printf("Enter new time (current: '%s') :\n", timeStr);
     auto timeBuffer{CommandParser::readLine()};
     if (!timeBuffer)
-        return COMMAND_ERROR;
+        return COMMAND_TIMEOUT;
     tm tm{};
     if (strptime(timeBuffer->data(), "%F %T", &tm) == nullptr)
     {
@@ -527,10 +528,10 @@ CommandCode Gateway::Commands::changeServer()
         return COMMAND_ERROR;
 
     Serial.printf("Start the gateway setup on the web portal and enter the access code:\n");
-    char pskBuffer[sizeof(mqttPsk)];
+    char pskBuffer[sizeof(mqttPsk)]{0};
     auto code{CommandParser::readLine()};
     if (!code)
-        return COMMAND_ERROR;
+        return COMMAND_TIMEOUT;
     {
         WiFiClientSecure client;
         client.setInsecure();
@@ -582,7 +583,7 @@ CommandCode Gateway::Commands::changeServer()
         }
     }
     Serial.println("Could not connect to the provided server. Configuration has not been changed.");
-    return COMMAND_SUCCESS;
+    return COMMAND_ERROR;
 }
 
 CommandCode Gateway::Commands::changeIntervals()

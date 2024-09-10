@@ -91,9 +91,15 @@ CommandParser::start(C&& commands)
         }
         switch (parseLine(buffer->data(), std::forward<C>(commands)))
         {
+        case COMMAND_ERROR:
+            Serial.printf("Command '%s' encountered a fatal error.\n", buffer->data());
+            break;
+        case COMMAND_TIMEOUT:
+            Serial.printf("Command '%s' timed out.\n", buffer->data());
+            break;
         case COMMAND_EXIT:
             Serial.println("Exiting command phase...");
-            return;
+            break;
         default:
             break;
         }

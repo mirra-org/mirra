@@ -12,6 +12,7 @@ enum CommandCode : uint8_t
 {
     COMMAND_NOT_FOUND,
     COMMAND_ERROR,
+    COMMAND_TIMEOUT,
     COMMAND_SUCCESS,
     COMMAND_EXIT
 };
