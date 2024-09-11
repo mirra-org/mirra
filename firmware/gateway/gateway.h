@@ -89,6 +89,12 @@ private:
         /// @brief Prints scheduling information about the connected nodes, including MAC address,
         /// next comm time, sample interval and max number of messages per comm period.
         CommandCode printSchedule();
+        /// @brief  Uploads a single dummy message with configurable timestamp and sensor value to
+        /// the MQTT server.
+        /// @param timestamp Timestamp for the dummy message.
+        /// @param value Value for the sensor value contained in the dummy message.
+
+        CommandCode testMQTT(uint32_t timestamp, uint32_t value);
 
         static constexpr auto getCommands()
         {
@@ -99,7 +105,9 @@ private:
                                 CommandAliasesPair(&Commands::rtcReset, "rtcreset"),
                                 CommandAliasesPair(&Commands::rtcSet, "rtcset"),
                                 CommandAliasesPair(&Commands::discovery, "discovery"),
-                                CommandAliasesPair(&Commands::printSchedule, "printschedule")));
+                                CommandAliasesPair(&Commands::printSchedule, "printschedule"),
+                                CommandAliasesPair(&Commands::changeServer, "server"),
+                                CommandAliasesPair(&Commands::testMQTT, "testmqtt")));
         }
     };
 

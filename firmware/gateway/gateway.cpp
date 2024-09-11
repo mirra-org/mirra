@@ -389,6 +389,7 @@ void Gateway::uploadPeriod()
             }
         }
         mqtt.disconnect();
+        WiFi.disconnect();
         Log::info("MQTT upload finished with ", messagesPublished, " messages sent.");
     }
     else
@@ -535,6 +536,12 @@ CommandCode Gateway::Commands::changeServer()
     {
         WiFiClientSecure client;
         client.setInsecure();
+        parent->wifiConnect();
+        if (WiFi.status() != WL_CONNECTED)
+        {
+            Serial.println("Could not connect to WiFi. Aborting linking procedure with server...");
+            return COMMAND_ERROR;
+        }
         HTTPClient https;
         https.addHeader("mirra-access-code", code->data());
         char url[128];
@@ -557,13 +564,14 @@ CommandCode Gateway::Commands::changeServer()
             }
             else
             {
-                Serial.printf("Error while submitting access code. Error code: %i. Aborting server "
-                              "linking.\n",
-                              status);
+                Serial.printf("Error while submitting access code. Error code: '%i'.\n", status);
             }
             Serial.println("Fallback: enter PSK manually (64 hexadecimal characters):");
             if (!CommandParser::editValue(pskBuffer))
+            {
+                WiFi.disconnect();
                 return COMMAND_ERROR;
+            }
         }
     }
     {
@@ -579,10 +587,13 @@ CommandCode Gateway::Commands::changeServer()
             Serial.printf("mqttServer: %s\n", mqttServer);
             Serial.printf("mqttPort: %u\n", mqttPort);
             Serial.printf("mqttPsk: %s\n", mqttPsk);
+            WiFi.disconnect();
             return COMMAND_SUCCESS;
         }
     }
-    Serial.println("Could not connect to the provided server. Configuration has not been changed.");
+    WiFi.disconnect();
+    Serial.println(
+        "Could not connect to the provided MQTT server. Configuration has not been changed.");
     return COMMAND_ERROR;
 }
 
@@ -644,4 +655,51 @@ CommandCode Gateway::Commands::printSchedule()
                       n.getSampleInterval(), n.getMaxMessages());
     }
     return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::testMQTT(uint32_t timestamp, uint32_t value)
+{
+    using DataEntry = SensorFile::DataEntry;
+    SensorValue sensorValue{0, 0, static_cast<float>(value)};
+    DataEntry::SensorValueArray sensorValues = {sensorValue};
+    DataEntry entry{MACAddress{}, timestamp, DataEntry::Flags{1, 0}, sensorValues};
+
+    Serial.println("Commencing upload to MQTT server...");
+    parent->wifiConnect();
+    if (WiFi.status() == WL_CONNECTED)
+    {
+        MQTTClient mqtt{mqttServer, mqttPort, parent->lora.getMACAddress().toString(), mqttPsk};
+        char topic[topicSize];
+        parent->createTopic(topic, entry.source);
+
+        if (mqtt.clientConnect(parent->lora.getMACAddress()))
+        {
+            if (mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry.getSize()))
+            {
+                Serial.println("MQTT message successfully published.");
+                mqtt.disconnect();
+                WiFi.disconnect();
+                return COMMAND_SUCCESS;
+            }
+            else
+            {
+                Serial.printf("Error while publishing to MQTT server. State: %i\n", mqtt.state());
+                mqtt.disconnect();
+                WiFi.disconnect();
+                return COMMAND_ERROR;
+            }
+        }
+        else
+        {
+            Serial.printf("Error while connecting to MQTT server. Aborting upload. State: %i\n",
+                          mqtt.state());
+            WiFi.disconnect();
+            return COMMAND_ERROR;
+        }
+    }
+    else
+    {
+        Serial.println("WiFi not connected. Aborting upload to MQTT server...");
+        return COMMAND_ERROR;
+    }
 }
