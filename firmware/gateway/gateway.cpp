@@ -543,10 +543,10 @@ CommandCode Gateway::Commands::changeServer()
             return COMMAND_ERROR;
         }
         HTTPClient https;
+        https.addHeader("mirra-gateway", parent->lora.getMACAddress().toString());
         https.addHeader("mirra-access-code", code->data());
         char url[128];
-        snprintf(url, sizeof(url), "%s%s%s", "https://", serverBuffer, "/psk/",
-                 parent->lora.getMACAddress().toString());
+        snprintf(url, sizeof(url), "%s%s%s", "https://", serverBuffer, "/gateway/code");
         if (!https.begin(client, url))
             Serial.printf("Error while connecting to '%s'. Ensure the address is correct.\n", url);
         int status = https.GET();
