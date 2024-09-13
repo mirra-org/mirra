@@ -155,7 +155,7 @@ protected:
 public:
     FIFOFile(FIFOFile&&) = default;
     FIFOFile& operator=(FIFOFile&&) = default;
-    virtual ~FIFOFile() { flush(); };
+    virtual ~FIFOFile() {};
 
     size_t getSize() const { return size; }
     size_t freeSpace() const;
