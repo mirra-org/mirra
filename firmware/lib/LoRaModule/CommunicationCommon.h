@@ -22,6 +22,7 @@ public:
     /// @brief Gets the raw byte pointer to the MAC address.
     /// @return A raw byte pointer to the MAC address.
     uint8_t* getAddress() { return address.data(); }
+    const uint8_t* getAddress() const { return address.data(); }
     /// @brief Gives a hex string representation of this MAC address.
     /// @param string Buffer to write the resulting string to. By default, this uses a static
     /// buffer.
@@ -111,7 +112,7 @@ public:
 template <MessageType T> class Message : public MessageHeader
 {
 public:
-    Message(const MACAddress& src, const MACAddress& dest) : MessageHeader(T, src, dest){};
+    Message(const MACAddress& src, const MACAddress& dest) : MessageHeader(T, src, dest) {};
     /// @return The messages' length in bytes.
     constexpr size_t getLength() const { return headerLength; }
     /// @return Whether the message's type flag matches the desired type.
@@ -136,8 +137,8 @@ public:
             uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset,
             uint32_t commInterval, uint32_t commTime, uint32_t maxMessages)
         : MessageHeader(TIME_CONFIG, src, dest), curTime{curTime}, sampleInterval{sampleInterval},
-          sampleRounding{sampleRounding}, sampleOffset{sampleOffset},
-          commInterval{commInterval}, commTime{commTime}, maxMessages{maxMessages} {};
+          sampleRounding{sampleRounding}, sampleOffset{sampleOffset}, commInterval{commInterval},
+          commTime{commTime}, maxMessages{maxMessages} {};
 
     uint32_t getCTime() const { return curTime; }
     uint32_t getSampleInterval() const { return sampleInterval; }
