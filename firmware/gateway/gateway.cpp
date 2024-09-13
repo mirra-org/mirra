@@ -331,9 +331,9 @@ bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
 {
     for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
     {
-        if (connected())
+        if (mqtt.connected())
             return true;
-        if (connect(clientId.toString()))
+        if (mqtt.connect(clientId.toString()))
             return true;
         delay(MQTT_TIMEOUT);
     }
@@ -368,7 +368,7 @@ void Gateway::uploadPeriod()
 
             if (mqtt.clientConnect(lora.getMACAddress()))
             {
-                if (mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry->getSize()))
+                if (mqtt.mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry->getSize()))
                 {
                     Log::debug("MQTT message successfully published.");
                     file.setUploaded();
@@ -376,14 +376,14 @@ void Gateway::uploadPeriod()
                 }
                 else
                 {
-                    Log::error("Error while publishing to MQTT server. State: ", mqtt.state());
+                    Log::error("Error while publishing to MQTT server. State: ", mqtt.mqtt.state());
                     nErrors++;
                 }
             }
             else
             {
                 Log::error("Error while connecting to MQTT server. Aborting upload. State: ",
-                           mqtt.state());
+                           mqtt.mqtt.state());
                 break;
             }
             if (nErrors >= MAX_MQTT_ERRORS)
@@ -392,7 +392,7 @@ void Gateway::uploadPeriod()
                 break;
             }
         }
-        mqtt.disconnect();
+        mqtt.mqtt.disconnect();
         WiFi.disconnect();
         Log::info("MQTT upload finished with ", messagesPublished, " messages sent.");
     }
@@ -538,14 +538,14 @@ CommandCode Gateway::Commands::changeServer()
     if (!code)
         return COMMAND_TIMEOUT;
     {
-        WiFiClientSecure client;
-        client.setInsecure();
         parent->wifiConnect();
         if (WiFi.status() != WL_CONNECTED)
         {
             Serial.println("Could not connect to WiFi. Aborting linking procedure with server...");
             return COMMAND_ERROR;
         }
+        WiFiClientSecure client;
+        client.setInsecure();
         HTTPClient https;
         https.addHeader("mirra-gateway", parent->lora.getMACAddress().toString());
         https.addHeader("mirra-access-code", code->data());
@@ -678,17 +678,18 @@ CommandCode Gateway::Commands::testMQTT(uint32_t timestamp, uint32_t value)
 
         if (mqtt.clientConnect(parent->lora.getMACAddress()))
         {
-            if (mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry.getSize()))
+            if (mqtt.mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry.getSize()))
             {
                 Serial.println("MQTT message successfully published.");
-                mqtt.disconnect();
+                mqtt.mqtt.disconnect();
                 WiFi.disconnect();
                 return COMMAND_SUCCESS;
             }
             else
             {
-                Serial.printf("Error while publishing to MQTT server. State: %i\n", mqtt.state());
-                mqtt.disconnect();
+                Serial.printf("Error while publishing to MQTT server. State: %i\n",
+                              mqtt.mqtt.state());
+                mqtt.mqtt.disconnect();
                 WiFi.disconnect();
                 return COMMAND_ERROR;
             }
@@ -696,7 +697,7 @@ CommandCode Gateway::Commands::testMQTT(uint32_t timestamp, uint32_t value)
         else
         {
             Serial.printf("Error while connecting to MQTT server. Aborting upload. State: %i\n",
-                          mqtt.state());
+                          mqtt.mqtt.state());
             WiFi.disconnect();
             return COMMAND_ERROR;
         }

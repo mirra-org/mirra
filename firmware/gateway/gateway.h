@@ -104,23 +104,27 @@ private:
                                 CommandAliasesPair(&Commands::rtcUpdateTime, "rtc"),
                                 CommandAliasesPair(&Commands::rtcReset, "rtcreset"),
                                 CommandAliasesPair(&Commands::rtcSet, "rtcset"),
-                                CommandAliasesPair(&Commands::discovery, "discovery"),
-                                CommandAliasesPair(&Commands::printSchedule, "printschedule"),
                                 CommandAliasesPair(&Commands::changeServer, "server"),
+                                CommandAliasesPair(&Commands::changeIntervals, "intervals"),
+                                CommandAliasesPair(&Commands::discovery, "discovery"),
+                                CommandAliasesPair(&Commands::setup, "setup"),
+                                CommandAliasesPair(&Commands::printSchedule, "printschedule"),
                                 CommandAliasesPair(&Commands::testMQTT, "testmqtt")));
         }
     };
 
-    class MQTTClient : public PubSubClient
+    struct MQTTClient
     {
         WiFiClientSecure wifi;
+        PubSubClient mqtt;
 
     public:
         MQTTClient(const char* url, uint16_t port, const char* identity, const char* psk)
-            : PubSubClient{url, port, wifi}
         {
             wifi.setPreSharedKey(identity, psk);
-            setBufferSize(512);
+            mqtt.setServer(url, port);
+            mqtt.setClient(wifi);
+            mqtt.setBufferSize(512);
         };
 
         /// @brief Attempts to connect to the designated MQTT server.
