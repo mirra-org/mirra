@@ -99,7 +99,7 @@ CommandParser::start(C&& commands)
             break;
         case COMMAND_EXIT:
             Serial.println("Exiting command phase...");
-            break;
+            return;
         default:
             break;
         }
