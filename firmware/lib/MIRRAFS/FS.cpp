@@ -89,12 +89,12 @@ template <> std::optional<int64_t> NVS::get(const char* key) const
 
 esp_err_t NVS::get_str(const char* key, char* buffer, size_t size) const
 {
-    return nvs_get_str(handle, key, buffer, &size) != ESP_OK;
+    return nvs_get_str(handle, key, buffer, &size);
 }
 
 esp_err_t NVS::get_blob(const char* key, void* buffer, size_t size) const
 {
-    return nvs_get_blob(handle, key, buffer, &size) != ESP_OK;
+    return nvs_get_blob(handle, key, buffer, &size);
 }
 
 template <> void NVS::set(const char* key, const uint8_t& value)
@@ -141,14 +141,16 @@ template <> void NVS::set(const char* key, const int64_t& value)
 
 template <> void NVS::set(const char* key, const char* const& value)
 {
-    if (nvs_set_str(handle, key, value) != ESP_OK)
-        Serial.printf("Error while setting key '%s'\n", key);
+    esp_err_t err;
+    if ((err = nvs_set_str(handle, key, value)) != ESP_OK)
+        Serial.printf("Error while setting key '%s, code: %i'\n", key, err);
 }
 
 void NVS::set_blob(const char* key, const void* value, size_t size)
 {
-    if (nvs_set_blob(handle, key, value, size) != ESP_OK)
-        Serial.printf("Error while setting key '%s'\n", key);
+    esp_err_t err;
+    if ((err = nvs_set_blob(handle, key, value, size)) != ESP_OK)
+        Serial.printf("Error while setting key '%s', code: %i\n", key, err);
 }
 
 void NVS::eraseKey(const char* key)
