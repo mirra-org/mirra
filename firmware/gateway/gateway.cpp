@@ -176,7 +176,11 @@ void Gateway::storeNodes()
     fs::NVS nvsNodes{"nodes"};
     for (const Node& node : nodes)
     {
-        nvsNodes.getValue<Node>(node.getMACAddress().toString()) = node;
+        Node defaultNode;
+        char key[7]{0};
+        strncpy(key, reinterpret_cast<const char*>(node.getMACAddress().getAddress()),
+                MACAddress::length);
+        nvsNodes.getValue<Node>(key, defaultNode) = node;
     }
 }
 
