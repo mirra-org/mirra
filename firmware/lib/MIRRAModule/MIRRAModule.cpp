@@ -12,7 +12,6 @@ void MIRRAModule::prepare(const MIRRAPins& pins)
     Serial.begin(115200);
     Serial.println("Serial initialised.");
     Serial.flush();
-    gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
     pinMode(pins.peripheralPowerPin, OUTPUT);
     digitalWrite(pins.peripheralPowerPin, HIGH);
     gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
@@ -41,8 +40,8 @@ void MIRRAModule::end()
     gpio_deep_sleep_hold_en();
 }
 MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress}, lora{pins.csPin, pins.rstPin, pins.dio0Pin,
-                                                             pins.rxPin, pins.txPin},
+    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
+      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
       commandEntry{pins.bootPin, true}
 {
     Log::getInstance().serial = &Serial;
