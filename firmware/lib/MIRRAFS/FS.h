@@ -18,11 +18,14 @@ private:
     char name[NVS_KEY_NAME_MAX_SIZE];
 
     template <class T> std::optional<T> get(const char* key) const;
+    template <class T> std::pair<esp_err_t, T> get_integral(const char* key) const;
     esp_err_t get_str(const char* key, char* buffer, size_t size) const;
     esp_err_t get_blob(const char* key, void* buffer, size_t size) const;
 
     template <class T> void set(const char* key, const T& value);
-    void set_blob(const char* key, const void* value, size_t size);
+    template <class T> esp_err_t set_integral(const char* key, T value);
+    esp_err_t set_str(const char* key, const char* value);
+    esp_err_t set_blob(const char* key, const void* value, size_t size);
 
 public:
     NVS(const char* name);
@@ -44,12 +47,12 @@ public:
 
     public:
         Value(const Value&) = delete;
-        Value(Value&&) = default;
-        Value& operator=(Value&&) = default;
+        Value(Value&&) = delete;
+        Value& operator=(Value&&) = delete;
 
         ~Value() { commit(); };
 
-        void commit() { nvs->set(key, cachedValue); }
+        void commit() { nvs->set<T>(key, cachedValue); }
         T& operator=(const T& other) { return cachedValue = other; }
         T& operator=(T&& other) { return cachedValue = std::move(other); }
         operator T() const { return cachedValue; }
