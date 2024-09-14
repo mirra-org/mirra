@@ -327,13 +327,13 @@ void Gateway::wifiConnect()
     wifiConnect(ssid, pass);
 }
 
-bool Gateway::MQTTClient::clientConnect(const MACAddress& clientId)
+bool Gateway::MQTTClient::clientConnect()
 {
     for (size_t i = 0; i < MQTT_ATTEMPTS; i++)
     {
         if (mqtt.connected())
             return true;
-        if (mqtt.connect(clientId.toString()))
+        if (mqtt.connect(identity))
             return true;
         delay(MQTT_TIMEOUT);
     }
@@ -355,7 +355,7 @@ void Gateway::uploadPeriod()
     SensorFile file{};
     if (WiFi.status() == WL_CONNECTED)
     {
-        MQTTClient mqtt{mqttServer, mqttPort, lora.getMACAddress().toString(), mqttPsk};
+        MQTTClient mqtt{mqttServer, mqttPort, lora.getMACAddress(), mqttPsk};
         size_t nErrors{0}; // amount of errors while uploading
         size_t messagesPublished{0};
         while (true)
@@ -366,7 +366,7 @@ void Gateway::uploadPeriod()
             char topic[topicSize];
             createTopic(topic, entry->source);
 
-            if (mqtt.clientConnect(lora.getMACAddress()))
+            if (mqtt.clientConnect())
             {
                 if (mqtt.mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry->getSize()))
                 {
@@ -579,9 +579,8 @@ CommandCode Gateway::Commands::changeServer()
         }
     }
     {
-        MQTTClient client{serverBuffer, portBuffer, parent->lora.getMACAddress().toString(),
-                          pskBuffer};
-        if (client.clientConnect(parent->lora.getMACAddress()))
+        MQTTClient client{serverBuffer, portBuffer, parent->lora.getMACAddress(), pskBuffer};
+        if (client.clientConnect())
         {
             strncpy(mqttServer, serverBuffer, sizeof(mqttServer));
             mqttPort = portBuffer;
@@ -672,11 +671,11 @@ CommandCode Gateway::Commands::testMQTT(uint32_t timestamp, uint32_t value)
     parent->wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
-        MQTTClient mqtt{mqttServer, mqttPort, parent->lora.getMACAddress().toString(), mqttPsk};
+        MQTTClient mqtt{mqttServer, mqttPort, parent->lora.getMACAddress(), mqttPsk};
         char topic[topicSize];
         parent->createTopic(topic, entry.source);
 
-        if (mqtt.clientConnect(parent->lora.getMACAddress()))
+        if (mqtt.clientConnect())
         {
             if (mqtt.mqtt.publish(topic, reinterpret_cast<uint8_t*>(&entry), entry.getSize()))
             {

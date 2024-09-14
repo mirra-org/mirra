@@ -117,10 +117,14 @@ private:
     {
         WiFiClientSecure wifi;
         PubSubClient mqtt;
+        char identity[13]{0};
 
     public:
-        MQTTClient(const char* url, uint16_t port, const char* identity, const char* psk)
+        MQTTClient(const char* url, uint16_t port, const MACAddress& mac, const char* psk)
         {
+            const uint8_t* rawMac = mac.getAddress();
+            snprintf(identity, sizeof(identity), "%02X%02X%02X%02X%02X%02X", rawMac[0], rawMac[1],
+                     rawMac[2], rawMac[3], rawMac[4], rawMac[5]);
             wifi.setPreSharedKey(identity, psk);
             mqtt.setServer(url, port);
             mqtt.setClient(wifi);
@@ -128,9 +132,8 @@ private:
         };
 
         /// @brief Attempts to connect to the designated MQTT server.
-        /// @param clientId The MAC address to use as a client ID while connecting.
         /// @return Whether the connection was successful or not.
-        bool clientConnect(const MACAddress& clientId);
+        bool clientConnect();
     };
 
     std::vector<Node> nodes;
