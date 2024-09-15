@@ -1,4 +1,4 @@
-#include "MIRRACommunicationCommon.h"
+#include "CommunicationCommon.h"
 
 using namespace mirra::communication;
 

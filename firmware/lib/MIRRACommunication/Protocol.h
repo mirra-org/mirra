@@ -1,8 +1,8 @@
 #ifndef __PROTOCOL_H__
 #define __PROTOCOL_H__
 
+#include <CommunicationCommon.h>
 #include <LoRaModule.h>
-#include <MIRRACommunicationCommon.h>
 
 #include <array>
 #include <optional>

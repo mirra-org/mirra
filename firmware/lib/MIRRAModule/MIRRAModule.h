@@ -2,8 +2,8 @@
 #define __MIRRAMODULE_H__
 
 #include "Commands.h"
+#include "CommunicationCommon.h"
 #include "LoRaModule.h"
-#include "MIRRACommunicationCommon.h"
 #include "PCF2129_RTC.h"
 #include "logging.h"
 #include <Arduino.h>
