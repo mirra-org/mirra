@@ -154,7 +154,7 @@ template <> struct MessageBody<ACK>
     /// @brief Bitset containing ACKS(1)/NACKS(0) for every received message according to sequence number
     AckSet acks;
 
-    constexpr MessageBody(AckSet acks) : acks{acks} {}
+    constexpr MessageBody(const AckSet& acks) : acks{acks} {}
 
     /// @return The message body size in bytes.
     constexpr size_t getSize() const { return sizeof(*this); }

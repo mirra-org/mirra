@@ -24,7 +24,7 @@ void LoRaModule::setCompletionWake()
 void LoRaModule::setTimerWake(uint32_t ms)
 {
     canWait = true;
-    timeoutUs = esp_timer_get_time() + ms * 1000;
+    timerStart = esp_timer_get_time();
     esp_sleep_enable_timer_wakeup(ms * 1000);
 }
 
@@ -34,12 +34,14 @@ void LoRaModule::clearWake()
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_ALL);
 }
 
-bool LoRaModule::wait()
+std::pair<bool, uint32_t> LoRaModule::wait()
 {
     if (!canWait)
-        return true;
+        return std::make_pair(false, 0);
     esp_light_sleep_start();
-    return esp_sleep_get_wakeup_cause() == ESP_SLEEP_WAKEUP_EXT0;
+    standby();
+    uint32_t timeDifferenceMs = (esp_timer_get_time() - timerStart) / 1000;
+    return std::make_pair(esp_sleep_get_wakeup_cause() != ESP_SLEEP_WAKEUP_EXT0, timeDifferenceMs);
 }
 
 bool LoRaModule::sendPacket(const uint8_t* buffer, size_t size, uint32_t timeoutMs)
@@ -71,6 +73,7 @@ bool LoRaModule::receivePacket(uint32_t timeoutMs)
         Log::error("Receive failed, code: ", state);
         return false;
     }
+    return true;
 }
 bool LoRaModule::readPacket(uint8_t* buffer)
 {

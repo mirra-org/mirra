@@ -31,7 +31,7 @@ private:
     uint8_t DIO0Pin;
 
     bool canWait{false};
-    uint64_t timeoutUs;
+    int64_t timerStart;
 
     void setCompletionWake();
     void setTimerWake(uint32_t ms);
@@ -45,6 +45,7 @@ public:
     /// @param rxPin Receive pin
     /// @param txPin Transmit pin
     LoRaModule(uint8_t csPin, uint8_t rstPin, uint8_t DIOPin, uint8_t rxPin, uint8_t txPin);
+    ~LoRaModule() { sleep(); }
 
     bool sendPacket(const uint8_t* buffer, size_t size, uint32_t timeoutMs = defaultSendTimeoutMs);
 
@@ -53,8 +54,8 @@ public:
     bool readPacket(uint8_t* buffer);
 
     /// @brief Wait until receive/send has been successfully completed or until timeout.
-    /// @return True when message succesfully sent/received, false if timed out.
-    bool wait();
+    /// @return Pair with timed out state (true if timed out)
+    std::pair<bool, uint32_t> wait();
 
     friend class Protocol;
 };

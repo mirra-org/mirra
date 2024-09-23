@@ -17,6 +17,8 @@ void Window::push(size_t size, size_t index)
     writeHead += size;
 }
 
+void Window::push(size_t size) { return push(size, std::find_if_not(static_cast<size_t>(0), maxWindowSize, hasMessage)); }
+
 void Window::clear()
 {
     writeHead = buffer->begin();
@@ -31,46 +33,53 @@ bool Protocol::sendAcks()
     ackMessage.header.addr = this->addr;
     if (!lora.sendPacket(ackMessage.toData(), ackMessage.getSize()))
         return false;
-    if (!lora.wait())
+    auto [timedOut, timeAsleep] = lora.wait();
+    if (timedOut)
         return false;
-    timeBudgetMs -= lora.getTimeOnAir(ackMessage.getSize()) / 1000; // todo: use timer to accurately reduce budget
+    timeBudgetMs -= timeAsleep;
 }
 
-bool Protocol::send(size_t index)
-{
-    MessageHeader& messageHeader = sendWind.getMessageHeader(index);
-    size_t messageSize = sendWind.getSize(index);
-    messageHeader.addr = this->addr;
-    messageHeader.seq = index;
-
-    if (std::none_of(index, Window::maxWindowSize, [this](size_t i) { return sendWind.hasMessage(i); }))
-        messageHeader.last = true;
-    if (!lora.sendPacket(sendWind[index], messageSize))
-        return false;
-    if (!lora.wait())
-        return false;
-    timeBudgetMs -= lora.getTimeOnAir(messageSize) / 1000; // todo: use timer to accurately reduce budget
-    return true;
-}
-
-bool Protocol::receive(size_t messageSize, MessageType type)
+bool Protocol::send()
 {
     for (size_t i = 0; i < sendWind.maxWindowSize; i++)
     {
         if (!sendWind.getAcks()[i])
         {
-            send(i);
+            MessageHeader& messageHeader = sendWind.getMessageHeader(i);
+            size_t messageSize = sendWind.getSize(i);
+            messageHeader.addr = this->addr;
+            messageHeader.seq = i;
+
+            if (std::none_of(i + 1, Window::maxWindowSize, [this](size_t i) { return sendWind.hasMessage(i); }))
+                messageHeader.last = true;
+            if (!lora.sendPacket(sendWind[i], messageSize))
+                return false;
+            auto [timedOut, timeAsleep] = lora.wait();
+            if (timedOut)
+                return false;
+            timeBudgetMs -= timeAsleep;
         }
     }
-    uint32_t timeoutMs = 1000 + (2 * lora.getTimeOnAir(messageSize) / 1000);
+    return true;
+}
+
+bool Protocol::receive(size_t messageSize, MessageType type)
+{
+    recvWind.clear();
+    send();
+    uint32_t timeoutMs = std::min(1000 + (2 * lora.getTimeOnAir(messageSize) / 1000), timeBudgetMs);
     while (true)
     {
         if (!lora.receivePacket(timeoutMs))
         {
             return false;
         }
-        bool timedOut = !lora.wait();
-        timeBudgetMs -= lora.getTimeOnAir(lora.getPacketLength()) / 1000; // todo: use timer to accurately reduce budget
+        auto [timedOut, timeAsleep] = lora.wait();
+        if (timeBudgetMs <= timeAsleep)
+        {
+            return false;
+        }
+        timeBudgetMs -= timeAsleep;
         if (timedOut || !lora.readPacket(recvWind.getWriteHead()))
         {
             sendAcks();
@@ -84,7 +93,8 @@ bool Protocol::receive(size_t messageSize, MessageType type)
         if (header->isType(MessageType::ACK))
         {
             sendWind.getAcks() = reinterpret_cast<Message<ACK>*>(header)->body.acks;
-            return receive(messageSize, type);
+            send();
+            continue;
         }
         if (!header->isType(type) && type != MessageType::ANY) // message does not have desired type
         {
@@ -94,9 +104,10 @@ bool Protocol::receive(size_t messageSize, MessageType type)
         recvWind.getAcks()[header->seq] = true;
         if (header->last)
         {
+            sendWind.clear();
             return true;
         }
     }
 }
 
-bool Protocol::close() {}
+bool Protocol::close() { receive(sizeof(Message<MessageType::ACK>), MessageType::ACK); }
