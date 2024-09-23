@@ -2,7 +2,6 @@
 #define __BATTERY_SENSOR_H__
 
 #include "Sensor.h"
-#include <Arduino.h>
 
 #define BATTERY_KEY 1
 
@@ -16,6 +15,6 @@ public:
     void setup();
     void startMeasurement();
     SensorValue getMeasurement();
-    uint8_t getID() const { return BATTERY_KEY; };
+    uint8_t getTypeTag() const { return BATTERY_KEY; };
 };
 #endif

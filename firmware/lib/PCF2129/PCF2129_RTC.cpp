@@ -1,9 +1,16 @@
 #include "PCF2129_RTC.h"
 #include "Arduino.h"
+#include <Wire.h>
 
-uint8_t PCF2129_RTC::bcdToDec(uint8_t value) { return (uint8_t)(((value >> 4) * 10) + (value & 0x0F)); }
+uint8_t PCF2129_RTC::bcdToDec(uint8_t value)
+{
+    return (uint8_t)(((value >> 4) * 10) + (value & 0x0F));
+}
 
-uint8_t PCF2129_RTC::decToBcd(uint8_t value) { return (uint8_t)((value / 10 * 16) + (value % 10)); }
+uint8_t PCF2129_RTC::decToBcd(uint8_t value)
+{
+    return (uint8_t)((value / 10 * 16) + (value % 10));
+}
 
 PCF2129_RTC::PCF2129_RTC(uint8_t intPin, uint8_t address) : address{address}, intPin{intPin}
 {
@@ -24,8 +31,11 @@ struct tm PCF2129_RTC::readTime()
     int hour{bcdToDec(Wire.read())};
     int mday{bcdToDec(Wire.read())};
     int wday{bcdToDec(Wire.read())};
-    int mon{bcdToDec(Wire.read()) - 1};    // (RTC uses 1-12 as months but C time structs use 0-11 as months)
-    int year{bcdToDec(Wire.read()) + 100}; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
+    int mon{bcdToDec(Wire.read()) -
+            1}; // (RTC uses 1-12 as months but C time structs use 0-11 as months)
+    int year{
+        bcdToDec(Wire.read()) +
+        100}; // (RTC uses 2000 as reference year but C time structs use 1900 as reference year)
 
     return tm{sec, min, hour, mday, mon, year, wday};
 }

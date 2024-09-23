@@ -1,6 +1,8 @@
 #include "config.h"
 #include "gateway.h"
 
+using namespace mirra;
+
 void setup(void)
 {
     esp_sleep_enable_timer_wakeup(100 * 1000);

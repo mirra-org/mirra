@@ -2,7 +2,6 @@
 #define __LIGHT_SENSOR_H__
 
 #include "Sensor.h"
-#include <Arduino.h>
 #include <AsyncAPDS9306.h>
 
 #define LIGHT_KEY 22
@@ -16,6 +15,6 @@ public:
     LightSensor() = default;
     void startMeasurement();
     SensorValue getMeasurement();
-    uint8_t getID() const { return LIGHT_KEY; };
+    uint8_t getTypeTag() const { return LIGHT_KEY; };
 };
 #endif

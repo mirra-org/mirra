@@ -1,29 +1,24 @@
-#ifndef SENSOR_H
-#define SENSOR_H
+#ifndef __SENSOR_H__
+#define __SENSOR_H__
 
+#include <memory>
 #include <stdint.h>
-#include <time.h>
 
 struct SensorValue
 {
-    uint16_t tag{0};
-    float value{0};
+    uint8_t typeTag;
+    uint8_t instanceTag;
+    float value;
 
     SensorValue() = default;
     /// @brief Constructs a SensorValue from the appropriate tags and value.
     /// @param typeTag Type ID of the sensor.
     /// @param instanceTag Instance ID of the sensor.
     /// @param value Concrete value.
-    SensorValue(unsigned int typeTag, unsigned int instanceTag, float value) : tag{(uint16_t)(((typeTag & 0xFFF) << 4) | (instanceTag & 0xF))}, value{value} {};
-    SensorValue(uint16_t tag, float value) : tag{tag}, value{value} {};
+    SensorValue(uint8_t typeTag, u_int8_t instanceTag, float value)
+        : typeTag{typeTag}, instanceTag{instanceTag}, value{value} {};
 } __attribute__((packed));
 
-// TODO: Find a way to avoid virtual functions, possibly using CRTP? -> Will make iterating over polymorphic container difficult
-
-/**
- * Sensor interface, this interface has to be overriden by all the sensor classes. This class allows to
- * have a generic way of reading the sensors.
- */
 class Sensor
 {
 public:
@@ -34,10 +29,17 @@ public:
     // @return The measured value.
     virtual SensorValue getMeasurement() = 0;
     /// @return The sensor's type ID.
-    virtual uint8_t getID() const = 0;
-    /// @brief Updates the sensor's next sample time according to the sensor-specific algorithm. (usually simply addition)
+    virtual uint8_t getTypeTag() const = 0;
+    uint8_t getInstanceTag() { return instanceTag; }
+    /// @return The sensor's name.
+    virtual const char* getName() const { return "Unnamed Sensor"; };
+    /// @brief Updates the sensor's next sample time according to the sensor-specific algorithm.
+    /// (usually simply addition)
     /// @param sampleInterval Sample interval with which to update.
-    virtual void updateNextSampleTime(uint32_t sampleInterval) { this->nextSampleTime += sampleInterval; };
+    virtual void updateNextSampleTime(uint32_t sampleInterval)
+    {
+        this->nextSampleTime += sampleInterval;
+    };
     /// @brief Forcibly sets the nextSampleTime of the sensor.
     void setNextSampleTime(uint32_t nextSampleTime) { this->nextSampleTime = nextSampleTime; };
     /// @return The next sample time in seconds from UNIX epoch.
@@ -45,6 +47,7 @@ public:
     virtual ~Sensor() = default;
 
 protected:
+    uint8_t instanceTag{0};
     uint32_t nextSampleTime = -1;
 };
 

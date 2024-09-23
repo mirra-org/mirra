@@ -1,7 +1,6 @@
 #ifndef PCF2129_RTC_H
 #define PCF2129_RTC_H
 
-#include <Wire.h>
 #include <time.h>
 
 #define PCF2129_CONTROL_1_REGISTER 0x00
@@ -31,9 +30,11 @@ private:
     /// @brief The RTC's I2C address.
     uint8_t address;
 
-    /// @brief Helper function that converts two nibbles representing a BCD number to a byte representing a decimal one
+    /// @brief Helper function that converts two nibbles representing a BCD number to a byte
+    /// representing a decimal one
     uint8_t bcdToDec(uint8_t value);
-    /// @brief Helper function that converts a byte representing a decimal number to two nibbles representing a BCD one.
+    /// @brief Helper function that converts a byte representing a decimal number to two nibbles
+    /// representing a BCD one.
     uint8_t decToBcd(uint8_t value);
 
 public:
@@ -44,10 +45,12 @@ public:
     uint32_t readTimeEpoch();
 
     void enableAlarm();
-    /// @brief Writes an alarm to the RTC with the given time. The alarm can't be further away than 1 month from now.
+    /// @brief Writes an alarm to the RTC with the given time. The alarm can't be further away than
+    /// 1 month from now.
     /// @param alarmEpoch The time struct time at which the alarm has to be triggered.
     void writeAlarm(const tm& alarmDatetime);
-    /// @brief Writes an alarm to the RTC with the given time. The alarm can't be further away than 1 month from now.
+    /// @brief Writes an alarm to the RTC with the given time. The alarm can't be further away than
+    /// 1 month from now.
     /// @param alarmEpoch The UNIX epoch in seconds at which the alarm has to be triggered.
     void writeAlarm(uint32_t alarmEpoch);
 

@@ -1,0 +1,26 @@
+/* define bytewise colorspace */
+:root {
+    --md-primary-fg-color: #71baff;
+    --md-primary-fg-color--light: #aed8ff;
+    ;
+    --md-primary-fg-color--dark: #3da1ff;
+    ;
+    --md-primary-bg-color: #292929;
+    --md-primary-bg-color--light: #505050;
+    --md-typeset-a-color: #5179ce;
+}
+
+/* replace title in the header with just 'Documentation' */
+.md-header__title>div:first-of-type>div:first-of-type>span:first-of-type {
+    display: none
+}
+
+.md-header__title>div:first-of-type>div:first-of-type:after {
+    content: 'Documentation'
+}
+
+[data-md-color-scheme="light"] img[src$="#only-dark"],
+[data-md-color-scheme="light"] img[src$="#gh-dark-mode-only"] {
+    display: none;
+    /* Hide dark images in light mode */
+}

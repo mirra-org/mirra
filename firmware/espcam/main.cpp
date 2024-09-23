@@ -111,7 +111,8 @@ void takePicture(void)
 
     // delay(1000);
     if (!SD_MMC.begin("/sdcard", true, false))
-    { // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses GPIO2 to read and write data to SD
+    { // Using ("/sdcard", true) sets mode1bit to true: sets SD card to '1_wire' mode: only uses
+      // GPIO2 to read and write data to SD
         Log::error("SD Card Mount Failed");
         delay(500);
     }
@@ -145,20 +146,26 @@ void takePicture(void)
     s->set_brightness(s, 0);     // -2 to 2
     s->set_contrast(s, 0);       // -2 to 2
     s->set_saturation(s, 0);     // -2 to 2
-    s->set_special_effect(s, 0); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
+    s->set_special_effect(s, 0); // 0 to 6 (0 - No Effect, 1 - Negative, 2 - Grayscale, 3 - Red
+                                 // Tint, 4 - Green Tint, 5 - Blue Tint, 6 - Sepia)
     // White balance
-    s->set_whitebal(s, 0); // 0 = disable , 1 = enable, switch off automatic white balancing, to force the fixed WB mode below?
+    s->set_whitebal(s, 0); // 0 = disable , 1 = enable, switch off automatic white balancing, to
+                           // force the fixed WB mode below?
     s->set_awb_gain(s, 1); // 0 = disable , 1 = enable
-    s->set_wb_mode(s, 2);  // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
+    s->set_wb_mode(
+        s,
+        2); // 0 to 4 - if awb_gain enabled (0 - Auto, 1 - Sunny, 2 - Cloudy, 3 - Office, 4 - Home)
     // Exposure
     s->set_exposure_ctrl(s, 1); // 0 = disable , 1 = enable, if too dim the exposure will be longer
     s->set_aec2(s, 0);          // 0 = disable , 1 = enable, ????
     s->set_ae_level(s, 0);      // -2 to 2, too lighten/darken picture on top of automatic exposure
     s->set_aec_value(s, 300);   // 0 to 1200, too set exposure yourself, when AEC is disabled
     // ISO
-    s->set_gain_ctrl(s, 0); // 0 = disable , 1 = enable #switch of automatic gain control, to ensure that a fixed gain of zero (next row) is applied
+    s->set_gain_ctrl(s, 0); // 0 = disable , 1 = enable #switch of automatic gain control, to ensure
+                            // that a fixed gain of zero (next row) is applied
     s->set_agc_gain(s, 0);  // 0 to 30
-    s->set_gainceiling(s, (gainceiling_t)0); // 0 to 6 #only for automatic gain control, defines the max gain
+    s->set_gainceiling(
+        s, (gainceiling_t)0); // 0 to 6 #only for automatic gain control, defines the max gain
     // picture correction
     s->set_bpc(s, 0);      // 0 = disable , 1 = enable
     s->set_wpc(s, 1);      // 0 = disable , 1 = enable

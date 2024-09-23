@@ -1,4 +1,5 @@
 #include "LightSensor.h"
+#include <Arduino.h>
 
 void LightSensor::startMeasurement()
 {
@@ -10,5 +11,6 @@ SensorValue LightSensor::getMeasurement()
 {
     while (!baseSensor.isMeasurementReady())
         ;
-    return SensorValue(getID(), static_cast<float>(baseSensor.getLuminosityMeasurement().calculateLux()));
+    return SensorValue(getTypeTag(), getInstanceTag(),
+                       static_cast<float>(baseSensor.getLuminosityMeasurement().calculateLux()));
 }

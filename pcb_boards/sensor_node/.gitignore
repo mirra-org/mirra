@@ -34,3 +34,6 @@ fp-info-cache
 # PDF files
 *.pdf
 
+# LCK files
+*.lck
+
