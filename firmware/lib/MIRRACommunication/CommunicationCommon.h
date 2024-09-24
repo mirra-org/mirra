@@ -8,8 +8,54 @@
 
 #include "Sensor.h"
 
-namespace mirra::communication
+namespace mirra::comm
 {
+
+/// @brief Wrapper around std::array that provides an interface for MAC address operations.
+class MACAddress
+{
+private:
+    std::array<uint8_t, 6> address{0};
+
+public:
+    /// @brief Constructs an empty (i.e. all bytes 0) MACAddress.
+    constexpr MACAddress() = default;
+    /// @brief Construct a MACAddress from a raw byte pointer.
+    /// @param address Raw byte pointer to MACAddress.
+    constexpr MACAddress(const uint8_t* address)
+        : address{*reinterpret_cast<const std::array<uint8_t, 6>*>(address)}
+    {}
+    /// @brief Constructs a MAC address from a string.
+    /// @param string The hex string from which to construct the MAC address in the
+    /// "00:00:00:00:00:00" format.
+    MACAddress(const char* string);
+
+    /// @brief Gets the raw byte pointer to the MAC address.
+    /// @return A raw byte pointer to the MAC address.
+    uint8_t* getAddress() { return address.data(); }
+    const uint8_t* getAddress() const { return address.data(); }
+
+    bool operator==(const MACAddress& other) const { return this->address == other.address; }
+    bool operator!=(const MACAddress& other) const { return this->address != other.address; }
+
+    /// @brief Gives a hex string representation of this MAC address.
+    /// @param string Buffer to write the resulting string to. By default, this uses a static
+    /// buffer.
+    /// @return The buffer to which the string was written.
+    char* toString(char* string = strBuffer) const;
+    char* toStringRaw(char* string = strBuffer) const;
+
+    /// @brief Size of the MAC address in bytes.
+    static constexpr size_t length = sizeof(address);
+    /// @brief Size of the string representation of a MAC address in bytes, including terminator.
+    static constexpr size_t stringLength = length * 3;
+    static constexpr size_t rawStringLength = length * 2 + 1;
+
+private:
+    /// @brief Internal static string buffer used by the toString method.
+    static char strBuffer[stringLength];
+} __attribute__((packed));
+
 struct Address
 {
     using GatewayID = uint16_t;
@@ -24,14 +70,19 @@ struct Address
     /// @param node The node ID.
     constexpr Address(GatewayID gateway, NodeID node) : gateway{gateway}, node{node} {}
     /// @brief Constructs a MIRRA address from a string.
-    /// @param string The hex string from which to construct the MIRRA address in the "0000:00" format.
-    constexpr Address(const char* string);
+    /// @param string The hex string from which to construct the MIRRA address in the "0000:00"
+    /// format.
+    Address(const char* string);
 
-    bool operator==(const Address& other) const { return this->gateway == other.gateway && this->node == other.node; }
+    bool operator==(const Address& other) const
+    {
+        return this->gateway == other.gateway && this->node == other.node;
+    }
     bool operator!=(const Address& other) const { return !(*this == other); }
 
     /// @brief Gives a hex string representation of this MIRRA address in the "0000:00" format.
-    /// @param string Buffer to write the resulting string to. By default, this uses a static buffer.
+    /// @param string Buffer to write the resulting string to. By default, this uses a static
+    /// buffer.
     /// @return The buffer to which the string was written.
     char* toString(char* string = strBuffer) const;
 
@@ -53,7 +104,8 @@ enum MessageType : uint8_t
     ANY = 7,
 };
 
-/// @brief Base class providing a common interface between all message types and the header portion of the message.
+/// @brief Base class providing a common interface between all message types and the header portion
+/// of the message.
 struct MessageHeader
 {
     /// @brief Type of the message
@@ -65,7 +117,8 @@ struct MessageHeader
     /// @brief The source MAC address of the message.
     Address addr;
 
-    constexpr MessageHeader(MessageType type, uint8_t seq, Address addr) : type{type}, last{false}, seq{seq}, addr{addr} {};
+    constexpr MessageHeader(MessageType type, uint8_t seq, Address addr)
+        : type{type}, last{false}, seq{seq}, addr{addr} {};
     constexpr MessageHeader(MessageType type) : MessageHeader(type, 0, Address()) {}
     constexpr bool isType(MessageType type) const { return this->type == type; }
     /// @brief Forcibly sets the type of this message.
@@ -89,9 +142,11 @@ private:
 public:
     MessageBody<T> body;
 
-private:
-    template <class... Ts, class = decltype(MessageBody(std::declval<Ts>()...))> constexpr Message(Ts&&... args) : header{T}, body{std::forward<Ts>(args)...} {}
+    template <class... Ts, class = decltype(MessageBody<T>(std::declval<Ts>()...))>
+    constexpr Message(Ts&&... args) : header{T}, body{std::forward<Ts>(args)...}
+    {}
 
+private:
     /// @return Whether the message's type flag matches the desired type.
     constexpr bool isValid() const { return header.isType(T); }
     /// @brief Converts this message in-place to a byte buffer.
@@ -100,9 +155,13 @@ private:
     /// @brief Converts a byte buffer in-place to this message type, without any runtime checking.
     /// @param data The byte buffer to interpret a message from.
     /// @return The resulting message object.
-    static constexpr Message<T>& fromData(uint8_t* data) { return *std::launder(reinterpret_cast<Message<T>*>(data)); }
+    static constexpr Message<T>& fromData(uint8_t* data)
+    {
+        return *std::launder(reinterpret_cast<Message<T>*>(data));
+    }
 
 public:
+    constexpr const MessageHeader& getHeader() const { return header; }
     /// @brief The maximum size of a message in bytes.
     static constexpr size_t maxSize{255};
     /// @return The message size in bytes.
@@ -111,14 +170,27 @@ public:
     friend class Protocol;
 } __attribute__((packed));
 
+template <> struct MessageBody<HELLO>
+{
+    MACAddress nac;
+
+    constexpr MessageBody(const MACAddress& mac) : nac{nac} {}
+
+    /// @return The message body size in bytes.
+    constexpr size_t getSize() const { return sizeof(*this); }
+} __attribute__((packed));
+
 template <> struct MessageBody<CONFIG>
 {
-    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, commTime, maxMessages;
+    uint32_t curTime, sampleInterval, sampleRounding, sampleOffset, commInterval, nextCommTime,
+        timeBudgetMs;
 
-    constexpr MessageBody(uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding, uint32_t sampleOffset, uint32_t commInterval, uint32_t commTime,
-                          uint32_t maxMessages)
-        : curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding}, sampleOffset{sampleOffset}, commInterval{commInterval},
-          commTime{commTime}, maxMessages{maxMessages} {};
+    constexpr MessageBody(uint32_t curTime, uint32_t sampleInterval, uint32_t sampleRounding,
+                          uint32_t sampleOffset, uint32_t commInterval, uint32_t nextCommTime,
+                          uint32_t timeBudgetMs)
+        : curTime{curTime}, sampleInterval{sampleInterval}, sampleRounding{sampleRounding},
+          sampleOffset{sampleOffset}, commInterval{commInterval}, nextCommTime{nextCommTime},
+          timeBudgetMs{timeBudgetMs} {};
 
     /// @return The message body size in bytes.
     constexpr size_t getSize() const { return sizeof(*this); };
@@ -131,7 +203,9 @@ template <> struct MessageBody<DATA>
     /// @brief The amount of values held in the messages' values array.
     uint8_t nValues;
     /// @brief The maximum amount of sensor values that can be held in a single sensor data message.
-    static constexpr size_t maxNValues{(Message<ANY>::maxSize - sizeof(MessageHeader) - sizeof(time) - sizeof(nValues)) / sizeof(SensorValue)};
+    static constexpr size_t maxNValues{
+        (Message<ANY>::maxSize - sizeof(MessageHeader) - sizeof(time) - sizeof(nValues)) /
+        sizeof(SensorValue)};
 
     class SensorValueArray : public std::array<SensorValue, maxNValues>
     {
@@ -139,10 +213,14 @@ template <> struct MessageBody<DATA>
 
     SensorValueArray values;
 
-    constexpr MessageBody(uint32_t time, uint8_t nValues) : time{time}, nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{} {};
+    constexpr MessageBody(uint32_t time, uint8_t nValues)
+        : time{time}, nValues{std::min(nValues, static_cast<uint8_t>(maxNValues))}, values{} {};
 
     /// @return The message body size in bytes.
-    constexpr size_t getSize() const { return sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue); };
+    constexpr size_t getSize() const
+    {
+        return sizeof(time) + sizeof(nValues) + nValues * sizeof(SensorValue);
+    };
 } __attribute__((packed));
 
 class AckSet : public std::bitset<32>
@@ -151,7 +229,8 @@ class AckSet : public std::bitset<32>
 
 template <> struct MessageBody<ACK>
 {
-    /// @brief Bitset containing ACKS(1)/NACKS(0) for every received message according to sequence number
+    /// @brief Bitset containing ACKS(1)/NACKS(0) for every received message according to sequence
+    /// number
     AckSet acks;
 
     constexpr MessageBody(const AckSet& acks) : acks{acks} {}

@@ -1,6 +1,6 @@
 #include <Protocol.h>
 
-using namespace mirra::communication;
+using namespace mirra::comm;
 
 Window::Window() : buffer{new std::array<uint8_t, bufferSize>}, writeHead{buffer->begin()} {}
 
@@ -17,7 +17,10 @@ void Window::push(size_t size, size_t index)
     writeHead += size;
 }
 
-void Window::push(size_t size) { return push(size, std::find_if_not(static_cast<size_t>(0), maxWindowSize, hasMessage)); }
+void Window::push(size_t size)
+{
+    return push(size, std::find_if_not(static_cast<size_t>(0), maxWindowSize, hasMessage));
+}
 
 void Window::clear()
 {
@@ -50,9 +53,11 @@ bool Protocol::send()
             messageHeader.addr = this->addr;
             messageHeader.seq = i;
 
-            if (std::none_of(i + 1, Window::maxWindowSize, [this](size_t i) { return sendWind.hasMessage(i); }))
+            if (std::none_of(i + 1, Window::maxWindowSize,
+                             [this](size_t i) { return sendWind.hasMessage(i); }))
                 messageHeader.last = true;
-            if (!lora.sendPacket(sendWind[i], messageSize))
+            if (!lora.sendPacket(sendWind[i], messageSize,
+                                 2 * lora.getTimeOnAir(messageSize) / 1000))
                 return false;
             auto [timedOut, timeAsleep] = lora.wait();
             if (timedOut)
@@ -85,14 +90,16 @@ bool Protocol::receive(size_t messageSize, MessageType type)
             sendAcks();
             continue;
         }
-        MessageHeader* header = reinterpret_cast<MessageHeader*>(recvWind.getWriteHead());
-        if (header->addr.gateway != this->addr.gateway) // message is either from another MIRRA set or another source entirely
+        MessageHeader* header =
+            std::launder(reinterpret_cast<MessageHeader*>(recvWind.getWriteHead()));
+        if (this->addr.gateway != 0 && header->addr.gateway != this->addr.gateway)
         {
+            // message is either from another MIRRA set or another source entirely
             continue;
         }
         if (header->isType(MessageType::ACK))
         {
-            sendWind.getAcks() = reinterpret_cast<Message<ACK>*>(header)->body.acks;
+            sendWind.getAcks() = Message<ACK>::fromData(recvWind.getWriteHead()).body.acks;
             send();
             continue;
         }
@@ -110,4 +117,7 @@ bool Protocol::receive(size_t messageSize, MessageType type)
     }
 }
 
-bool Protocol::close() { receive(sizeof(Message<MessageType::ACK>), MessageType::ACK); }
+bool Protocol::close()
+{
+    receive(sizeof(Message<MessageType::ACK>), MessageType::ACK);
+}

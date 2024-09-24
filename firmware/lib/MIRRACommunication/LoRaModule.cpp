@@ -1,10 +1,13 @@
 #include "LoRaModule.h"
 
-LoRaModule::LoRaModule(uint8_t csPin, uint8_t rstPin, uint8_t DIO0Pin, uint8_t rxPin, uint8_t txPin)
-    : module{csPin, DIO0Pin, rstPin}, DIO0Pin{DIO0Pin}, SX1272(&module)
+using namespace mirra::comm;
+
+LoRaModule::LoRaModule(uint8_t spreadingFactor)
+    : module{pins::cs, pins::dio0, pins::rst}, SX1272(&module)
 {
-    this->module.setRfSwitchPins(rxPin, txPin);
-    int state = this->begin(frequency, spreadingFactor, codingRate, syncWord, power, preambleLength, gain);
+    this->module.setRfSwitchPins(pins::rx, pins::tx);
+    int state =
+        this->begin(frequency, spreadingFactor, codingRate, syncWord, power, preambleLength, gain);
     if (state == RADIOLIB_ERR_NONE)
     {
         Log::debug("LoRa init successful.");
@@ -18,7 +21,7 @@ LoRaModule::LoRaModule(uint8_t csPin, uint8_t rstPin, uint8_t DIO0Pin, uint8_t r
 void LoRaModule::setCompletionWake()
 {
     canWait = true;
-    esp_sleep_enable_ext0_wakeup((gpio_num_t)DIO0Pin, 1);
+    esp_sleep_enable_ext0_wakeup((gpio_num_t)pins::dio0, 1);
 }
 
 void LoRaModule::setTimerWake(uint32_t ms)

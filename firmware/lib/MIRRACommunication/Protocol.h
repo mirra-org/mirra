@@ -7,8 +7,11 @@
 #include <array>
 #include <optional>
 
-namespace mirra::communication
+#include "config.h"
+
+namespace mirra::comm
 {
+
 class Window
 {
 public:
@@ -40,8 +43,14 @@ public:
     size_t getSize(size_t index) const { return sizes[index]; }
 
     uint8_t* operator[](size_t index) const { return messages[index]; }
-    MessageHeader& getMessageHeader(size_t index) const { return *reinterpret_cast<MessageHeader*>(messages[index]); };
-    template <MessageType T> const MessagesArray<T>& getMessagesArray() const { return *reinterpret_cast<MessagesArray<T>>(messages); }
+    MessageHeader& getMessageHeader(size_t index) const
+    {
+        return *reinterpret_cast<MessageHeader*>(messages[index]);
+    };
+    template <MessageType T> const MessagesArray<T>& getMessagesArray() const
+    {
+        return *reinterpret_cast<MessagesArray<T>>(messages);
+    }
 
     AckSet& getAcks() { return acks; }
     uint8_t* getWriteHead() const { return writeHead; }
@@ -59,7 +68,8 @@ private:
 
     size_t timeBudgetMs;
 
-    Protocol(Address addr, LoRaModule& lora, size_t timeBudgetMs) : addr{addr}, lora{lora}, timeBudgetMs{timeBudgetMs} {};
+    Protocol(Address addr, uint8_t spreadingFactor, size_t timeBudgetMs)
+        : addr{addr}, lora{lora}, timeBudgetMs{timeBudgetMs} {};
 
     bool send();
     bool sendAcks();

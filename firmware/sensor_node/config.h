@@ -1,9 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-// Pin definitions
-#include "pins_sensornode_rev5.h"
-
 // Filepaths
 #define DATA_FP "/data.dat"
 #define DATA_TEMP_FP "/data_temp.dat"
@@ -11,7 +8,7 @@
 // Communication and sensor settings
 #define WAKE_BEFORE_COMM_PERIOD                                                                    \
     3 // s, time before comm period when node should wake from deep sleep
-#define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
+#define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
 
 #define DEFAULT_SAMPLING_INTERVAL                                                                  \
     (60 * 60) // s, default sensor sampling interval to resort to when no communication with gateway

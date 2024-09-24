@@ -7,61 +7,45 @@
 #include "config.h"
 #include <vector>
 
-#define COMM_PERIOD_LENGTH(MAX_MESSAGES)                                                           \
-    ((MAX_MESSAGES * SENSOR_DATA_TIMEOUT + TIME_CONFIG_TIMEOUT) / 1000)
-#define IDEAL_MESSAGES(COMM_INTERVAL, SAMP_INTERVAL) (COMM_INTERVAL / SAMP_INTERVAL)
-#define MAX_MESSAGES(COMM_INTERVAL, SAMP_INTERVAL) ((3 * COMM_INTERVAL / (2 * SAMP_INTERVAL)) + 1)
-
 namespace mirra
 {
 
 /// @brief Representation of a Sensor Node's attributes relevant for communication, used for
 /// tracking the status of nodes from the gateway.
-class Node
+struct Node
 {
-private:
-    MACAddress mac{};
-    uint32_t sampleInterval{0};
-    uint32_t sampleRounding{0};
-    uint32_t sampleOffset{0};
-    uint32_t lastCommTime{0};
-    uint32_t commInterval{0};
-    uint32_t nextCommTime{0};
-    uint32_t maxMessages{0};
-    uint32_t errors{0};
+    comm::Address address;
+    comm::MACAddress mac;
+    uint32_t sampleInterval;
+    uint32_t sampleRounding;
+    uint32_t sampleOffset;
+    uint32_t commInterval;
+    uint32_t nextCommTime;
+    uint32_t timeBudgetMs;
+    uint8_t spreadingFactor;
 
-public:
-    Node() {}
-    Node(Message<TIME_CONFIG>& m) : mac{m.getDest()} { timeConfig(m); }
+    Node() = default;
+    Node(const comm::MACAddress& mac, uint8_t spreadingFactor, comm::Message<comm::CONFIG>& m)
+        : mac{mac}, spreadingFactor{spreadingFactor}
+    {
+        timeConfig(m);
+    }
     /// @brief Configures the Node with a time config message, the same way the actual module would
     /// do.
     /// @param m Time Config message used to saturate the representation's attributes.
-    void timeConfig(Message<TIME_CONFIG>& m);
+    void timeConfig(comm::Message<comm::CONFIG>& m);
     /// @brief Configures the Node as if the time config message was missed, the same way the actual
     /// module would do.
     void naiveTimeConfig(uint32_t cTime);
 
     /// @return A Time Config message that yields the same exact configuration as this node.
-    Message<TIME_CONFIG> currentTimeConfig(const MACAddress& src, uint32_t cTime);
-
-    const MACAddress& getMACAddress() const { return mac; }
-    uint32_t getSampleInterval() const { return sampleInterval; }
-    uint32_t getSampleRounding() const { return sampleRounding; }
-    uint32_t getSampleOffset() const { return sampleOffset; }
-    uint32_t getLastCommTime() const { return lastCommTime; }
-    uint32_t getCommInterval() const { return commInterval; }
-    uint32_t getNextCommTime() const { return nextCommTime; }
-    uint32_t getMaxMessages() const { return maxMessages; }
-
-    void setSampleInterval(uint32_t sampleInterval) { this->sampleInterval = sampleInterval; }
-    void setSampleRounding(uint32_t sampleRounding) { this->sampleRounding = sampleRounding; }
-    void setSampleOffset(uint32_t sampleOffset) { this->sampleOffset = sampleOffset; }
+    comm::Message<comm::CONFIG> currentTimeConfig(uint32_t cTime);
 };
 
 class Gateway : public MIRRAModule
 {
 public:
-    Gateway(const MIRRAPins& pins);
+    Gateway();
     void wake();
 
 private:
@@ -117,14 +101,12 @@ private:
     {
         WiFiClientSecure wifi;
         PubSubClient mqtt;
-        char identity[13]{0};
+        char identity[comm::MACAddress::rawStringLength]{0};
 
     public:
-        MQTTClient(const char* url, uint16_t port, const MACAddress& mac, const char* psk)
+        MQTTClient(const char* url, uint16_t port, const comm::MACAddress& mac, const char* psk)
         {
-            const uint8_t* rawMac = mac.getAddress();
-            snprintf(identity, sizeof(identity), "%02X%02X%02X%02X%02X%02X", rawMac[0], rawMac[1],
-                     rawMac[2], rawMac[3], rawMac[4], rawMac[5]);
+            mac.toStringRaw(identity);
             wifi.setPreSharedKey(identity, psk);
             mqtt.setServer(url, port);
             mqtt.setClient(wifi);

@@ -1,9 +1,6 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
 
-// Pin definitions
-#include "pins_sensornode_rev5.h"
-
 // WiFi settings
 #define WIFI_SSID "GontrodeWiFi2"
 #define WIFI_PASS "b5uJeswA"
@@ -32,24 +29,8 @@
 #define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
 #define LISTEN_COMM_PERIOD(X) ((X) - COMM_PERIOD_PADDING)
 
-#define UPLOAD_EVERY                                                                               \
-    3 // amount of times the gateway will communicate with the nodes before uploading data to the
-      // server
-
 #define DEFAULT_SAMPLE_INTERVAL (20 * 60) // s, time between sensor sampling for every node
 #define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
 #define DEFAULT_SAMPLE_OFFSET (0)
-
-#define DISCOVERY_TIMEOUT 5 * 60 * 1000 // ms
-
-#define TIME_CONFIG_TIMEOUT 6000 // ms
-#define TIME_CONFIG_ATTEMPTS 1
-
-#define SENSOR_DATA_TIMEOUT 6000 // ms
-#define SENSOR_DATA_ATTEMPTS 1
-
-#define MAX_SENSORDATA_FILESIZE 512 * 1024 // bytes
-
-#define MAX_SENSOR_NODES 20
 
 #endif

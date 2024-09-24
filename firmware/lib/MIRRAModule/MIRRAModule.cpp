@@ -7,45 +7,42 @@
 
 using namespace mirra;
 
-void MIRRAModule::prepare(const MIRRAPins& pins)
+void MIRRAModule::prepare()
 {
     Serial.begin(115200);
     Serial.println("Serial initialised.");
     Serial.flush();
-    pinMode(pins.peripheralPowerPin, OUTPUT);
-    digitalWrite(pins.peripheralPowerPin, HIGH);
-    gpio_hold_dis(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    pinMode(pins::peripheralPower, OUTPUT);
+    digitalWrite(pins::peripheralPower, HIGH);
+    gpio_hold_dis(static_cast<gpio_num_t>(pins::peripheralPower));
     Serial.println("Powering on peripherals...");
     // wait for power propagation
     esp_sleep_enable_timer_wakeup(10 * 1000);
     esp_light_sleep_start();
     esp_sleep_disable_wakeup_source(ESP_SLEEP_WAKEUP_TIMER);
 
-    Wire.begin(pins.sdaPin, pins.sclPin); // i2c
-    pinMode(pins.bootPin, INPUT);
+    Wire.begin(pins::sda, pins::scl); // i2c
+    pinMode(pins::boot, INPUT);
     Serial.println("I2C wire initialised.");
     fs::NVS::init();
     Serial.println("NVS initialsed.");
+    Log::getInstance().serial = &Serial;
+    Serial.println("Logger initialised.");
 }
 
 void MIRRAModule::end()
 {
     Log::close();
-    lora.sleep();
     Wire.end();
     Serial.flush();
     Serial.end();
-    digitalWrite(pins.peripheralPowerPin, LOW);
-    gpio_hold_en(static_cast<gpio_num_t>(pins.peripheralPowerPin));
+    digitalWrite(pins::peripheralPower, LOW);
+    gpio_hold_en(static_cast<gpio_num_t>(pins::peripheralPower));
     gpio_deep_sleep_hold_en();
 }
-MIRRAModule::MIRRAModule(const MIRRAPins& pins)
-    : pins{pins}, rtc{pins.rtcIntPin, pins.rtcAddress},
-      lora{pins.csPin, pins.rstPin, pins.dio0Pin, pins.rxPin, pins.txPin},
-      commandEntry{pins.bootPin, true}
+MIRRAModule::MIRRAModule() : rtc{pins::rtcInt, pins::rtcAddress}, commandEntry{pins::boot, true}
 {
-    Log::getInstance().serial = &Serial;
-    Serial.println("Logger initialised.");
+    esp_efuse_mac_get_default(mac.getAddress());
     Log::info("Reset reason: ", esp_rom_get_reset_reason(0));
 }
 
@@ -104,10 +101,10 @@ bool MIRRAModule::SensorFile::isLast(size_t index)
     return !getUnuploadedAddress(index + 1);
 }
 
-void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
+void MIRRAModule::SensorFile::push(const comm::Message<comm::DATA>& message)
 {
-    FIFOFile::push(DataEntry{message.getSource(), message.time,
-                             DataEntry::Flags{message.nValues, false}, message.values});
+    FIFOFile::push(DataEntry{message.getHeader().addr, message.body.time,
+                             DataEntry::Flags{message.body.nValues, false}, message.body.values});
 }
 
 void MIRRAModule::SensorFile::setUploaded()
@@ -146,7 +143,7 @@ void MIRRAModule::deepSleep(uint32_t sleepTime)
         rtc.enableAlarm();
         esp_sleep_enable_ext0_wakeup((gpio_num_t)rtc.getIntPin(), 0);
     }
-    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(this->pins.bootPin),
+    esp_sleep_enable_ext1_wakeup((gpio_num_t)_BV(pins::boot),
                                  ESP_EXT1_WAKEUP_ALL_LOW); // wake when BOOT button is pressed
     Log::info("Good night.");
     this->end();

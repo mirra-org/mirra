@@ -3,8 +3,9 @@
 
 #include "Commands.h"
 #include "FS.h"
-#include "LoRaModule.h"
 #include "PCF2129_RTC.h"
+#include "Pins.h"
+#include "Protocol.h"
 
 namespace mirra
 {
@@ -13,30 +14,13 @@ namespace mirra
 class MIRRAModule
 {
 public:
-    /// @brief Struct that groups pin configurations for the initialisation of a MIRRAModule.
-    struct MIRRAPins
-    {
-        uint8_t bootPin;
-        uint8_t peripheralPowerPin;
-        uint8_t sdaPin;
-        uint8_t sclPin;
-        uint8_t csPin;
-        uint8_t rstPin;
-        uint8_t dio0Pin;
-        uint8_t txPin;
-        uint8_t rxPin;
-        uint8_t rtcIntPin;
-        uint8_t rtcAddress;
-    };
     /// @brief Configures the ESP32's pins, starts basic communication primitives (UART, I2C) and
     /// mounts the filesystem. Must be called before initialisation of the MIRRAModule.
-    /// @param pins The pin configuration for the MIRRAModule.
-    static void prepare(const MIRRAPins& pins);
+    static void prepare();
 
 protected:
     /// @brief Initialises the MIRRAModule, RTC, LoRa and logging modules.
-    /// @param pins The pin configuration for the MIRRAModule.
-    MIRRAModule(const MIRRAPins& pins);
+    MIRRAModule();
 
     MIRRAModule(const MIRRAModule&) = delete;
     MIRRAModule& operator=(const MIRRAModule&) = delete;
@@ -89,9 +73,9 @@ protected:
                 uint8_t nValues : 7;
                 bool uploaded : 1;
             };
-            using SensorValueArray = Message<SENSOR_DATA>::SensorValueArray;
+            using SensorValueArray = comm::MessageBody<comm::DATA>::SensorValueArray;
 
-            MACAddress source;
+            comm::Address source;
             uint32_t time;
             Flags flags;
             SensorValueArray values;
@@ -133,7 +117,7 @@ protected:
         std::optional<DataEntry> getUnuploaded(size_t index);
         bool isLast(size_t index);
 
-        void push(const Message<SENSOR_DATA>& message);
+        void push(const comm::Message<comm::DATA>& message);
         void push(const DataEntry& entry) { FIFOFile::push(&entry, entry.getSize()); }
         void setUploaded();
 
@@ -156,17 +140,16 @@ protected:
     /// @brief Gracefully shuts down the dependencies. This function can be thought of as a
     /// counterpoint to MIRRAModule::prepare.
     /// @see MIRRAModule::prepare
-    void end();
+    static void end();
 
-    /// @brief Pin configuration in use by this module.
-    const MIRRAPins pins;
     /// @brief RTC module in use by this module.
     PCF2129_RTC rtc;
-    /// @brief LoRa module in use by this module.
-    LoRaModule lora;
+
+    /// @brief This module's MAC address.
+    comm::MACAddress mac;
 
     CommandEntry commandEntry;
 };
-};
+}
 
 #endif

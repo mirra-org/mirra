@@ -1,38 +1,33 @@
 #include "gateway.h"
 #include "HTTPClient.h"
+#include <Protocol.h>
 #include <cstring>
 #include <esp_sntp.h>
 
 using namespace mirra;
 
-void Node::timeConfig(Message<TIME_CONFIG>& m)
+void Node::timeConfig(comm::Message<comm::CONFIG>& m)
 {
-    this->sampleInterval = m.getSampleInterval();
-    this->sampleRounding = m.getSampleRounding();
-    this->sampleOffset = m.getSampleOffset();
-    this->lastCommTime = m.getCTime();
-    this->commInterval = m.getCommInterval();
-    this->nextCommTime = m.getCommTime();
-    this->maxMessages = m.getMaxMessages();
-    if (this->errors > 0)
-        this->errors--;
+    this->address = m.getHeader().addr;
+    this->sampleInterval = m.body.sampleInterval;
+    this->sampleRounding = m.body.sampleRounding;
+    this->sampleOffset = m.body.sampleOffset;
+    this->commInterval = m.body.commInterval;
+    this->nextCommTime = m.body.nextCommTime;
+    this->timeBudgetMs = m.body.timeBudgetMs;
 }
 
 void Node::naiveTimeConfig(uint32_t cTime)
 {
     while (this->nextCommTime <= cTime)
         this->nextCommTime += commInterval;
-    this->errors++;
 }
 
-Message<TIME_CONFIG> Node::currentTimeConfig(const MACAddress& src, uint32_t cTime)
+comm::Message<comm::CONFIG> Node::currentTimeConfig(uint32_t cTime)
 {
-    return Message<TIME_CONFIG>(src, mac, cTime, sampleInterval, sampleRounding, sampleOffset,
-                                commInterval, nextCommTime, maxMessages);
+    return comm::Message<comm::CONFIG>(cTime, sampleInterval, sampleRounding, sampleOffset,
+                                       commInterval, nextCommTime, timeBudgetMs);
 }
-
-RTC_DATA_ATTR bool initialBoot{true};
-RTC_DATA_ATTR int commPeriods{0};
 
 RTC_DATA_ATTR char ssid[33]{WIFI_SSID};
 RTC_DATA_ATTR char pass[33]{WIFI_PASS};
@@ -54,16 +49,10 @@ RTC_DATA_ATTR uint32_t commInterval{DEFAULT_COMM_INTERVAL};
 // portion of this functionality is available with just the isLost lambda, During the comm period, a
 // node that is not 'well-scheduled' would be scheduled so that it would become so.
 
-auto lambdaIsLost = [](const Node& e) { return e.getCommInterval() != commInterval; };
+auto lambdaIsLost = [](const Node& n) { return n.commInterval != commInterval; };
 
-Gateway::Gateway(const MIRRAPins& pins) : MIRRAModule(pins)
+Gateway::Gateway() : MIRRAModule()
 {
-    if (initialBoot)
-    {
-        Log::info("First boot.");
-        Commands(this).rtcUpdateTime();
-        initialBoot = false;
-    }
     loadNodes();
 }
 
@@ -72,12 +61,8 @@ void Gateway::wake()
     Log::debug("Running wake()...");
     if (!nodes.empty() && rtc.getSysTime() >= (WAKE_COMM_PERIOD(nodes[0].getNextCommTime()) - 3))
         commPeriod();
-    // send data to server only every UPLOAD_EVERY comm periods
-    if (commPeriods >= UPLOAD_EVERY)
-    {
-        uploadPeriod();
-    }
-    Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
+    uploadPeriod();
+    Serial.printf("Welcome! This is Gateway %s\n", mac.toString());
     commandEntry.prompt(Commands(this));
     Log::debug("Entering deep sleep...");
     if (nodes.empty())
@@ -101,12 +86,7 @@ void Gateway::discovery()
     Log::info("Starting discovery...");
     while (true)
     {
-        if (nodes.size() >= MAX_SENSOR_NODES)
-        {
-            Log::info("Could not run discovery because maximum amount of nodes has been reached.");
-            return;
-        }
-        Log::info("Awaiting discovery message...");
+        comm::Protocol() Log::info("Awaiting discovery message...");
         auto hello{lora.listenMessage<HELLO>(DISCOVERY_TIMEOUT, pins.bootPin)};
         if (!hello)
         {
@@ -126,17 +106,22 @@ void Gateway::discovery()
         Log::debug("Sending time config message to ", candidate.toString());
         if (duplicate)
         {
-            lora.sendMessage(duplicate->get().currentTimeConfig(lora.getMACAddress(), cTime));
+            lora.sendMessage(duplicate->get().currentTimeConfig(mac, cTime));
         }
         else
         {
             uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)
                                   ? cTime + commInterval
                                   : nextScheduledCommTime()};
-            Message<TIME_CONFIG> timeConfig{
-                lora.getMACAddress(), candidate,      cTime,
-                sampleInterval,       sampleRounding, sampleOffset,
-                commInterval,         commTime,       MAX_MESSAGES(commInterval, sampleInterval)};
+            Message<TIME_CONFIG> timeConfig{mac,
+                                            candidate,
+                                            cTime,
+                                            sampleInterval,
+                                            sampleRounding,
+                                            sampleOffset,
+                                            commInterval,
+                                            commTime,
+                                            MAX_MESSAGES(commInterval, sampleInterval)};
             Log::debug("Time config constructed. cTime = ", cTime,
                        " sampleInterval = ", sampleInterval, " sampleRounding = ", sampleRounding,
                        " sampleOffset = ", sampleOffset, " commInterval = ", commInterval,
@@ -177,10 +162,7 @@ void Gateway::storeNodes()
     for (const Node& node : nodes)
     {
         Node defaultNode;
-        char key[7]{0};
-        strncpy(key, reinterpret_cast<const char*>(node.getMACAddress().getAddress()),
-                MACAddress::length);
-        nvsNodes.getValue<Node>(key, defaultNode) = node;
+        nvsNodes.getValue<Node>(node.mac.toStringRaw(), defaultNode) = node;
     }
 }
 
@@ -221,7 +203,6 @@ void Gateway::commPeriod()
     {
         file.push(m);
     }
-    commPeriods++;
 }
 
 uint32_t Gateway::nextScheduledCommTime()
@@ -273,14 +254,14 @@ bool Gateway::nodeCommPeriod(Node& n, std::vector<Message<SENSOR_DATA>>& data)
             break;
         }
         Log::debug("Sending data ACK to ", n.getMACAddress().toString(), " ...");
-        lora.sendMessage(Message<ACK_DATA>(lora.getMACAddress(), n.getMACAddress()));
+        lora.sendMessage(Message<ACK_DATA>(mac, n.getMACAddress()));
     }
     uint32_t commTime{n.getNextCommTime() + commInterval};
     if (lambdaIsLost(n) && !(std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)))
         commTime = nextScheduledCommTime();
     Log::info("Sending time config message to ", n.getMACAddress().toString(), " ...");
     cTime = rtc.getSysTime();
-    Message<TIME_CONFIG> timeConfig{lora.getMACAddress(),
+    Message<TIME_CONFIG> timeConfig{mac,
                                     n.getMACAddress(),
                                     cTime,
                                     n.getSampleInterval(),
@@ -343,7 +324,7 @@ bool Gateway::MQTTClient::clientConnect()
 char* Gateway::createTopic(char* topic, const MACAddress& nodeMAC)
 {
     char macStringBuffer[MACAddress::stringLength];
-    snprintf(topic, topicSize, "%s/%s/%s", TOPIC_PREFIX, lora.getMACAddress().toString(),
+    snprintf(topic, topicSize, "%s/%s/%s", TOPIC_PREFIX, mac.toString(),
              nodeMAC.toString(macStringBuffer));
     return topic;
 }
@@ -352,10 +333,10 @@ void Gateway::uploadPeriod()
 {
     Log::info("Commencing upload to MQTT server...");
     wifiConnect();
-    SensorFile file{};
     if (WiFi.status() == WL_CONNECTED)
     {
-        MQTTClient mqtt{mqttServer, mqttPort, lora.getMACAddress(), mqttPsk};
+        SensorFile file{};
+        MQTTClient mqtt{mqttServer, mqttPort, mac, mqttPsk};
         size_t nErrors{0}; // amount of errors while uploading
         size_t messagesPublished{0};
         while (true)
@@ -400,7 +381,6 @@ void Gateway::uploadPeriod()
     {
         Log::error("WiFi not connected. Aborting upload to MQTT server...");
     }
-    commPeriods = 0;
 }
 
 void Gateway::parseNodeUpdate(char* update)
@@ -547,7 +527,7 @@ CommandCode Gateway::Commands::changeServer()
         WiFiClientSecure client;
         client.setInsecure();
         HTTPClient https;
-        https.addHeader("mirra-gateway", parent->lora.getMACAddress().toString());
+        https.addHeader("mirra-gateway", parent->mac.toString());
         https.addHeader("mirra-access-code", code->data());
         char url[128];
         snprintf(url, sizeof(url), "%s%s%s", "https://", serverBuffer, "/gateway/code");
@@ -579,7 +559,7 @@ CommandCode Gateway::Commands::changeServer()
         }
     }
     {
-        MQTTClient client{serverBuffer, portBuffer, parent->lora.getMACAddress(), pskBuffer};
+        MQTTClient client{serverBuffer, portBuffer, parent->mac, pskBuffer};
         if (client.clientConnect())
         {
             strncpy(mqttServer, serverBuffer, sizeof(mqttServer));
@@ -671,7 +651,7 @@ CommandCode Gateway::Commands::testMQTT(uint32_t timestamp, uint32_t value)
     parent->wifiConnect();
     if (WiFi.status() == WL_CONNECTED)
     {
-        MQTTClient mqtt{mqttServer, mqttPort, parent->lora.getMACAddress(), mqttPsk};
+        MQTTClient mqtt{mqttServer, mqttPort, parent->mac, mqttPsk};
         char topic[topicSize];
         parent->createTopic(topic, entry.source);
 

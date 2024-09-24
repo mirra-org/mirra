@@ -1,28 +1,18 @@
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#include <stdint.h>
 
-// Pin assignments
-
-#define BOOT_PIN 0
-
-#define PERIPHERAL_POWER_PIN 16
-
-#define SDA_PIN 21
-#define SCL_PIN 22
-
-// LoRa module pins
-#define CS_PIN 27   // Chip select pin
-#define RST_PIN 5   // Reset pin
-#define DIO0_PIN 13 // DIO0 pin: LoRa interrupt pin
-#define TX_PIN 12
-#define RX_PIN 26
-
-// PCF2129 timer
-#define RTC_INT_PIN 35   // Interrupt pin
-#define RTC_ADDRESS 0x51 // i2c address
-
-// Battery pins
-#define BATT_PIN 34
-#define BATT_EN_PIN 33
-
-#endif
+namespace mirra::pins
+{
+constexpr uint8_t boot = 0;
+constexpr uint8_t peripheralPower = 16;
+constexpr uint8_t sda = 21;
+constexpr uint8_t scl = 22;
+constexpr uint8_t cs = 27;
+constexpr uint8_t rst = 5;
+constexpr uint8_t dio0 = 13;
+constexpr uint8_t tx = 12;
+constexpr uint8_t rx = 26;
+constexpr uint8_t rtcInt = 35;
+constexpr uint8_t rtcAddress = 0x51;
+constexpr uint8_t batt = 34;
+constexpr uint8_t battEn = 33;
+}
