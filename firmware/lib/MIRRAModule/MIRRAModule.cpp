@@ -106,8 +106,8 @@ bool MIRRAModule::SensorFile::isLast(size_t index)
 
 void MIRRAModule::SensorFile::push(const Message<SENSOR_DATA>& message)
 {
-    FIFOFile::push(DataEntry{message.getSource(), message.time,
-                             DataEntry::Flags{message.nValues, false}, message.values});
+    push(DataEntry{message.getSource(), message.time, DataEntry::Flags{message.nValues, false},
+                   message.values});
 }
 
 void MIRRAModule::SensorFile::setUploaded()
