@@ -1,3 +1,4 @@
+from enum import Enum
 from pathlib import Path
 
 from pydantic import field_validator
@@ -6,19 +7,25 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 root_dir: Path = Path(__file__).parents[1]
 
 
-class _Config(BaseSettings):
+class Config(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=(root_dir / "mirra_backend.env"),
         env_file_encoding="utf-8",
         env_prefix="MIRRA_",
         case_sensitive=False,
-        extra="ignore",
+        extra="forbid",
     )
+
+    class DBPrefill(str, Enum):
+        default = "default"
+        test = "test"
+        empty = "empty"
 
     host: str = "0.0.0.0"
     port: int = 80
 
     db_file: Path = root_dir / "db/db.sqlite"
+    db_prefill: DBPrefill = DBPrefill.default
 
     templates_folder: Path = root_dir / "mirra_backend/templates"
 
@@ -26,11 +33,12 @@ class _Config(BaseSettings):
 
     location_images_folder: Path = root_dir / "db/location_images"
 
-    mqtt_broker_config_file: Path = root_dir / "mosquitto/mosquitto.conf"
-    mqtt_psk_file: Path = root_dir / "db/gateways.psk"
+    mqtt_enabled: bool = True
     mqtt_host: str = "127.0.0.1"
     mqtt_port: int = 8882
     mqtt_prefix: str = "mirra/#"
+    mqtt_broker_config_file: Path = root_dir / "mosquitto/mosquitto.conf"
+    mqtt_psk_file: Path = root_dir / "db/gateways.psk"
 
     vite_dist_folder: Path = root_dir / "front/dist"
     vite_host: str = "127.0.0.1"
@@ -63,4 +71,4 @@ class _Config(BaseSettings):
         return value
 
 
-config = _Config()
+config = Config()

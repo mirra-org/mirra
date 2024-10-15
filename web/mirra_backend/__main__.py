@@ -12,7 +12,8 @@ from mirra_backend.data.prepopulation import prepopulate
 def main() -> None:
     print(f"Running as EUID '{os.geteuid()}'.")
     configure_db()
-    configure_mqtt()
+    if config.mqtt_enabled:
+        configure_mqtt()
     configure_routes()
     configure_templates()
     uvicorn.run(
@@ -26,11 +27,7 @@ def main() -> None:
 
 
 def configure_db() -> None:
-    if not config.db_file.exists():
-        global_init(delete_tables=False)
-        prepopulate()
-    else:
-        global_init(delete_tables=False)
+    global_init()
 
     if not config.mqtt_psk_file.exists():
         open(config.mqtt_psk_file, "a").close()

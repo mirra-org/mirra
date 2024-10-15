@@ -27,7 +27,6 @@ def set_sqlite_pragma(
 # Updated using https://stackoverflow.com/questions/69751346/how-to-make-the-sqlalchemy-async-sessionasync-session-generator-as-class-base
 def global_init(
     overwrite_factory: bool = False,
-    delete_tables: bool = True,
     db_conn_url: str | None = None,
     db_async_conn_url: str | None = None,
 ) -> None:
@@ -58,8 +57,6 @@ def global_init(
 
     import mirra_backend.data  # noqa: F401
 
-    if delete_tables:
-        SqlAlchemyBase.metadata.drop_all(engine)
     # create new tables according to our current schema
     SqlAlchemyBase.metadata.create_all(engine)
 
