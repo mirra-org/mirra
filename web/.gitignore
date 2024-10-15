@@ -119,5 +119,8 @@ dmypy.json
 # Visual Studio Code
 .vscode/*
 
+node_modules/
+
 # Database
 db/
+deploy_db/
