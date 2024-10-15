@@ -1,0 +1,11 @@
+{% extends 'layout.html' %}
+{% block title %}add gateway{% endblock %}
+{% block body %}
+<h3>add gateway form</h3>
+<form hx-post="/gateway/add", hx-target="next div">
+    <label>gateway mac address</label>
+    <input name="gateway_mac">
+    <button class="btn primary">Submit</button>
+</form>
+<div></div>
+{% endblock %}

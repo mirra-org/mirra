@@ -1,0 +1,51 @@
+[
+    {
+        "id": 1,
+        "name": "Battery Voltage",
+        "sensor_class_id": 1,
+        "unit": "V",
+        "accuracy": 0.05
+    },
+    {
+        "id": 3,
+        "name": "Soil Moisture",
+        "sensor_class_id": 3,
+        "unit": "%RH",
+        "accuracy": 2.0
+    },
+    {
+        "id": 4,
+        "name": "Soil Temperature",
+        "sensor_class_id": 4,
+        "unit": "C",
+        "accuracy": 0.5
+    },
+    {
+        "id": 12,
+        "name": "SHT35 - Temperature",
+        "sensor_class_id": 12,
+        "unit": "C",
+        "accuracy": 0.1
+    },
+    {
+        "id": 13,
+        "name": "SHT35 - Humidity",
+        "sensor_class_id": 13,
+        "unit": "RH",
+        "accuracy": 0.5
+    },
+    {
+        "id": 22,
+        "name": "APDS",
+        "sensor_class_id": 22,
+        "unit": "lux",
+        "accuracy": 1.0
+    },
+    {
+        "id": 100,
+        "name": "Random",
+        "sensor_class_id": 100,
+        "unit": "",
+        "accuracy": 0.0
+    }
+]

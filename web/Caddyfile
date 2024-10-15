@@ -1,0 +1,7 @@
+mirra.ugent.be {
+    @not-code not path /gateway/code
+    basic_auth @not-code {
+       fornalab $2a$12$SsmQ/xfcnbv81DkPlrl6UObpIJk5h84EMIcNDUpDbZh06aqmrLHvu
+    }
+    reverse_proxy mirra_web:80
+}

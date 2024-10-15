@@ -1,3 +1,0 @@
-mirra.ugent.be {
-    reverse_proxy mirra_web:80
-}

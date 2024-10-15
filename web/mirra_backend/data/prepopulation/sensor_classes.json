@@ -1,0 +1,30 @@
+[
+    {
+        "id": 1,
+        "desc": "BATTERY"
+    },
+    {
+        "id": 3,
+        "desc": "SOIL_HUMIDITY"
+    },
+    {
+        "id": 4,
+        "desc": "SOIL_TEMPERATURE"
+    },
+    {
+        "id": 12,
+        "desc": "AIR_TEMPERATURE"
+    },
+    {
+        "id": 13,
+        "desc": "AIR_HUMIDITY"
+    },
+    {
+        "id": 22,
+        "desc": "LIGHT"
+    },
+    {
+        "id": 100,
+        "desc": "RANDOM"
+    }
+]

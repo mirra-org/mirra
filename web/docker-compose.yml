@@ -1,0 +1,28 @@
+services:
+    caddy:
+        container_name: "caddy"
+        image: caddy:latest
+        restart: unless-stopped
+        cap_add:
+            - NET_ADMIN
+        ports:
+            - 80:80
+            - 443:443
+        volumes:
+            - ./Caddyfile:/etc/caddy/Caddyfile
+
+    mirra_web:
+        container_name: "mirra_web"
+        image: mirra_web:latest
+        build: .
+        volumes:
+            - ./deploy_db/:/mirra_web/db/
+        ports:
+            - 8883:8883
+
+volumes:
+    db_data:
+
+networks:
+    default:
+        name: proxy

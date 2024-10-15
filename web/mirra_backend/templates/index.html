@@ -1,0 +1,10 @@
+{% extends 'layout.html' %}
+{% block title %}home{% endblock %}
+{% block body %}
+<h1> mirra </h1>
+<p>home page</p>
+<ul>
+    <li><a href=" {{ url_for('add_gateway_page') }}">add gateway</a></li>
+    <li><a href=" {{ url_for('export_page') }}">download db</a></li>
+</ul>
+{% endblock %}

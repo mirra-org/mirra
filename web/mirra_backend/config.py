@@ -1,0 +1,66 @@
+from pathlib import Path
+
+from pydantic import field_validator
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
+root_dir: Path = Path(__file__).parents[1]
+
+
+class _Config(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=(root_dir / "mirra_backend.env"),
+        env_file_encoding="utf-8",
+        env_prefix="MIRRA_",
+        case_sensitive=False,
+        extra="ignore",
+    )
+
+    host: str = "0.0.0.0"
+    port: int = 80
+
+    db_file: Path = root_dir / "db/db.sqlite"
+
+    templates_folder: Path = root_dir / "mirra_backend/templates"
+
+    prepopulation_folder: Path = root_dir / "mirra_backend/data/prepopulation"
+
+    location_images_folder: Path = root_dir / "db/location_images"
+
+    mqtt_broker_config_file: Path = root_dir / "mosquitto/mosquitto.conf"
+    mqtt_psk_file: Path = root_dir / "db/gateways.psk"
+    mqtt_host: str = "127.0.0.1"
+    mqtt_port: int = 8882
+    mqtt_prefix: str = "mirra/#"
+
+    vite_dist_folder: Path = root_dir / "front/dist"
+    vite_host: str = "127.0.0.1"
+    vite_port: int = 5173
+
+    gateway_access_code_time: int = 180
+
+    dev: bool = False
+
+    @field_validator(
+        "db_file",
+        "templates_folder",
+        "prepopulation_folder",
+        "location_images_folder",
+        "mqtt_broker_config_file",
+        "mqtt_psk_file",
+        "vite_dist_folder",
+    )
+    @classmethod
+    def make_path_absolute(cls, value: str) -> Path:
+        path = Path(value)
+        if not path.is_absolute():
+            return root_dir / Path(value)
+        return path
+
+    @field_validator("location_images_folder")
+    @classmethod
+    def make_path_directory(cls, value: Path) -> Path:
+        value.mkdir(parents=True, exist_ok=True)
+        return value
+
+
+config = _Config()
