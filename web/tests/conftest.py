@@ -96,7 +96,6 @@ async def init():
 
     database.global_init(
         overwrite_factory=True,
-        delete_tables=False,
         db_conn_url=sa.make_url("sqlite+pysqlite:///:memory:"),
         db_async_conn_url=sa.make_url("sqlite+aiosqlite:///:memory:"),
     )

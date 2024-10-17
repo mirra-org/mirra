@@ -36,4 +36,24 @@ class _MQTTBroker:
         self.process.send_signal(SIGHUP)
 
 
-mqtt_broker = _MQTTBroker()
+class _EmptyMQTTBroker(_MQTTBroker):
+    def start(self) -> None:
+        pass
+
+    def add_psk(self, mac: MACAddress, psk: str) -> None:
+        pass
+
+    def remove_psk(self, mac: MACAddress, reload: bool = True) -> None:
+        pass
+
+    def update_psk(self, mac: MACAddress, psk: str) -> None:
+        pass
+
+    def reload(self) -> None:
+        pass
+
+
+if config.mqtt_enabled:
+    mqtt_broker = _MQTTBroker()
+else:
+    mqtt_broker = _EmptyMQTTBroker()

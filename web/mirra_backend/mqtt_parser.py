@@ -60,4 +60,18 @@ class _MQTTParser:
         self.client.disconnect()
 
 
-mqtt_parser = _MQTTParser()
+class _EmptyMQTTParser(_MQTTParser):
+    def __init__(self) -> None:
+        pass
+
+    def start(self) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+if config.mqtt_enabled:
+    mqtt_parser = _MQTTParser()
+else:
+    mqtt_parser = _EmptyMQTTParser()
