@@ -1,4 +1,4 @@
-FROM python:3.11-slim AS mirra-poetry-builder
+FROM python:3.12-slim AS mirra-poetry-builder
 WORKDIR /setup
 ENV PYTHONUNBUFFERED=1 \
     # prevents python creating .pyc files
