@@ -6,6 +6,7 @@ from fastapi.templating import Jinja2Templates
 
 from mirra_backend.config import config
 from mirra_backend.data.database import global_init
+from mirra_backend.data.prepopulation import prepopulate_sync
 from mirra_backend.exceptions import MIRRAException, custom_exception_handler
 
 
@@ -25,8 +26,12 @@ async def lifespan(app: FastAPI):
 
 def configure_db() -> None:
     global_init()
-
+    if not config.db_file.exists():
+        config.db_file.parent.mkdir(parents=True, exist_ok=True)
+        prepopulate_sync()
+    config.location_images_folder.mkdir(parents=True, exist_ok=True)
     if not config.mqtt_psk_file.exists():
+        config.mqtt_psk_file.parent.mkdir(parents=True, exist_ok=True)
         open(config.mqtt_psk_file, "a").close()
 
 
