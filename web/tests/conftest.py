@@ -1,3 +1,4 @@
+from itertools import chain
 from random import random
 from typing import AsyncGenerator
 
@@ -9,13 +10,17 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 import mirra_backend.data as data
 import mirra_backend.data.database as database
-from mirra_backend.data.prepopulation import _prepopulate as populate_default
+from mirra_backend.config import DBPrefill
+from mirra_backend.data.prepopulation import prepopulate
 from mirra_backend.types.mac_address import MACAddress
 
 pytest_plugins = ("pytest_asyncio",)
 
-gateway_macs = [MACAddress(f"{i:012X}") for i in range(256, 259)]
-node_macs = [MACAddress(f"{i:012X}") for i in range(1, 10)]
+gateway_macs = [MACAddress(f"{i*256:012X}") for i in range(3)]
+node_macs = [
+    MACAddress(f"{i:012X}")
+    for i in chain(range(1, 4), range(257, 262), range(513, 523))
+]
 timestamps = range(0, 7201, 1200)
 
 
@@ -90,9 +95,8 @@ async def init():
     await (await test_cache_async_session.connection()).run_sync(
         data.SqlAlchemyBase.metadata.create_all
     )
-
-    await populate_default(default_cache_async_session)
-    await populate_test(test_cache_async_session)
+    await prepopulate(default_cache_async_session, db_prefill=DBPrefill.default)
+    await prepopulate(test_cache_async_session, db_prefill=DBPrefill.test)
 
     database.global_init(
         overwrite_factory=True,

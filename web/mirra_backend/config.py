@@ -4,7 +4,14 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-root_dir: Path = Path(__file__).parents[1]
+root_dir: Path = Path(__file__).parents[1].resolve()
+
+
+class DBPrefill(str, Enum):
+    default = "default"
+    test = "test"
+    custom = "custom"
+    empty = "empty"
 
 
 class Config(BaseSettings):
@@ -15,11 +22,6 @@ class Config(BaseSettings):
         case_sensitive=False,
         extra="forbid",
     )
-
-    class DBPrefill(str, Enum):
-        default = "default"
-        test = "test"
-        empty = "empty"
 
     host: str = "0.0.0.0"
     port: int = 80
@@ -61,14 +63,8 @@ class Config(BaseSettings):
     def make_path_absolute(cls, value: str) -> Path:
         path = Path(value)
         if not path.is_absolute():
-            return root_dir / Path(value)
+            return (root_dir / Path(value)).resolve()
         return path
-
-    @field_validator("location_images_folder")
-    @classmethod
-    def make_path_directory(cls, value: Path) -> Path:
-        value.mkdir(parents=True, exist_ok=True)
-        return value
 
 
 config = Config()
