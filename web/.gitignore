@@ -124,3 +124,6 @@ node_modules/
 # Database
 db/
 deploy_db/
+
+# env files
+*.env
