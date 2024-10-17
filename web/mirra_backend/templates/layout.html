@@ -4,19 +4,20 @@
 <head>
 
     <meta charset="utf-8">
-    <meta name="theme-color" content="#343a40"/>
+    <meta name="theme-color" content="#343a40" />
     <meta name="description" content="Microclimate Instrument for Remote Realtime Applications">
     <meta name="author" content="">
 
     <title>mirra - {% block title %}{% endblock %}</title>
 
+    {{ vite_hmr_client()}}
     {{ vite_asset('layout.ts') }}
 
     {% block head %}{% endblock %}
 </head>
 
 <body id="page-top">
-{% block body %}{% endblock %}
+    {% block body %}{% endblock %}
 </body>
 
 </html>

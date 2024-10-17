@@ -21,7 +21,7 @@ if not config.dev:
 def _script_tag(src: str, attrs: dict[str] | None = None) -> str:
     attrs_str = ""
     if attrs is not None:
-        attrs_str = " ".join(f'{key}:"{value}"' for key, value in attrs.items())
+        attrs_str = " ".join(f'{key}="{value}"' for key, value in attrs.items())
 
     return f'<script {attrs_str} src="{src}"></script>'
 
