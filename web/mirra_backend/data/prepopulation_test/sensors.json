@@ -1,0 +1,23 @@
+[
+    {
+        "id": 0,
+        "name": "Test Temperature Sensor",
+        "sensor_class_id": 0,
+        "unit": "°C",
+        "accuracy": 0.05
+    },
+    {
+        "id": 1,
+        "name": "Test CO2 Sensor",
+        "sensor_class_id": 1,
+        "unit": "ppm",
+        "accuracy": 2.5
+    },
+    {
+        "id": 2,
+        "name": "Test Air Pressure Sensor",
+        "sensor_class_id": 2,
+        "unit": "bar",
+        "accuracy": 0.00001
+    }
+]

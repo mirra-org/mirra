@@ -1,0 +1,14 @@
+[
+    {
+        "id": 0,
+        "desc": "TEMPERATURE"
+    },
+    {
+        "id": 1,
+        "desc": "CO2"
+    },
+    {
+        "id": 2,
+        "desc": "AIR PRESSURE"
+    }
+]

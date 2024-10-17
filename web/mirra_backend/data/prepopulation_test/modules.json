@@ -1,0 +1,128 @@
+[
+    {
+        "id": 0,
+        "physical_module_id": 0,
+        "location_id": 0,
+        "gateway_id": null
+    },
+    {
+        "id": 1,
+        "physical_module_id": 1,
+        "location_id": 1,
+        "gateway_id": 0
+    },
+    {
+        "id": 2,
+        "physical_module_id": 2,
+        "location_id": 2,
+        "gateway_id": 0
+    },
+    {
+        "id": 3,
+        "physical_module_id": 3,
+        "location_id": 3,
+        "gateway_id": 0
+    },
+    {
+        "id": 100,
+        "physical_module_id": 100,
+        "location_id": 100,
+        "gateway_id": null
+    },
+    {
+        "id": 101,
+        "physical_module_id": 101,
+        "location_id": 101,
+        "gateway_id": 100
+    },
+    {
+        "id": 102,
+        "physical_module_id": 102,
+        "location_id": 102,
+        "gateway_id": 100
+    },
+    {
+        "id": 103,
+        "physical_module_id": 103,
+        "location_id": 103,
+        "gateway_id": 100
+    },
+    {
+        "id": 104,
+        "physical_module_id": 104,
+        "location_id": 104,
+        "gateway_id": 100
+    },
+    {
+        "id": 105,
+        "physical_module_id": 105,
+        "location_id": 105,
+        "gateway_id": 100
+    },
+    {
+        "id": 200,
+        "physical_module_id": 200,
+        "location_id": 200,
+        "gateway_id": null
+    },
+    {
+        "id": 201,
+        "physical_module_id": 201,
+        "location_id": 201,
+        "gateway_id": 200
+    },
+    {
+        "id": 202,
+        "physical_module_id": 202,
+        "location_id": 202,
+        "gateway_id": 200
+    },
+    {
+        "id": 203,
+        "physical_module_id": 203,
+        "location_id": 203,
+        "gateway_id": 200
+    },
+    {
+        "id": 204,
+        "physical_module_id": 204,
+        "location_id": 204,
+        "gateway_id": 200
+    },
+    {
+        "id": 205,
+        "physical_module_id": 205,
+        "location_id": 205,
+        "gateway_id": 200
+    },
+    {
+        "id": 206,
+        "physical_module_id": 206,
+        "location_id": null,
+        "gateway_id": 200
+    },
+    {
+        "id": 207,
+        "physical_module_id": 207,
+        "location_id": null,
+        "gateway_id": 200
+    },
+    {
+        "id": 208,
+        "physical_module_id": 208,
+        "location_id": null,
+        "gateway_id": 200
+    },
+    {
+        "id": 209,
+        "physical_module_id": 209,
+        "location_id": null,
+        "gateway_id": 200
+    },
+    {
+        "id": 210,
+        "physical_module_id": 210,
+        "location_id": null,
+        "gateway_id": 200
+    }
+]
