@@ -20,7 +20,7 @@ def set_sqlite_pragma(
     dbapi_connection: Connection, connection_record: _ConnectionRecord
 ) -> None:
     cursor = dbapi_connection.cursor()
-    cursor.execute(f"PRAGMA foreign_keys=ON")
+    cursor.execute("PRAGMA foreign_keys=ON")
     cursor.close()
 
 
@@ -69,7 +69,7 @@ def get_ddl() -> str:
 
     import mirra_backend.data  # noqa: F401
 
-    db_conn_url = sa.make_url("sqlite+pysqlite:///" + ":memory:")
+    db_conn_url = sa.make_url("sqlite+pysqlite:///:memory:")
     engine = sa.create_mock_engine(db_conn_url, executor=dump)
     SqlAlchemyBase.metadata.create_all(engine, checkfirst=False)
 
