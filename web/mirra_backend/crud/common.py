@@ -37,6 +37,8 @@ def inject_session_sync(
     try:
         event_loop = aio.get_event_loop()
     except RuntimeError:
+        event_loop = None
+    if event_loop is None:
         return aio.run(inject_session(coroutine, *args, **kwargs))
     task = event_loop.create_task(inject_session(coroutine, *args, **kwargs))
     return event_loop.run_until_complete(task)
