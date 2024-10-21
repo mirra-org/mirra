@@ -29,8 +29,6 @@ class Config(BaseSettings):
     db_file: Path = root_dir / "db/db.sqlite"
     db_prefill: DBPrefill = DBPrefill.default
 
-    templates_folder: Path = root_dir / "mirra_backend/templates"
-
     prepopulation_folder: Path = root_dir / "mirra_backend/data/prepopulation"
 
     location_images_folder: Path = root_dir / "db/location_images"
@@ -52,7 +50,6 @@ class Config(BaseSettings):
 
     @field_validator(
         "db_file",
-        "templates_folder",
         "prepopulation_folder",
         "location_images_folder",
         "mqtt_broker_config_file",

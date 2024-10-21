@@ -4,21 +4,34 @@ from typing import Annotated
 
 from fastapi import APIRouter, BackgroundTasks, Form, Header
 from fastapi.responses import HTMLResponse, PlainTextResponse
+from htpy import button, div, form, h3, input, label, li, ul
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import mirra_backend.crud.gateway as crud_gateway
 from mirra_backend.config import config
 from mirra_backend.crud.common import Session
+from mirra_backend.layout import layout
 from mirra_backend.types.mac_address import MACAddress
-
-from .common import Templater
 
 router = APIRouter(prefix="/gateway", default_response_class=HTMLResponse)
 
 
 @router.get("/add")
-async def add_gateway_page(template: Templater) -> HTMLResponse:
-    return template("add_gateway_page.html")
+async def add_gateway_page() -> HTMLResponse:
+    return HTMLResponse(
+        layout(
+            [
+                h3["add gateway form"],
+                form(hx_post="/gateway/add", hx_target="next div")[
+                    label["gateway mac address"],
+                    input(name="gateway_mac"),
+                    button(class_="btn primary")["Submit"],
+                ],
+                div,
+            ],
+            titled="add gateway",
+        )
+    )
 
 
 gateways_codes_psks: dict[MACAddress, tuple[str, str]] = {}
@@ -36,7 +49,6 @@ async def timeout_gateway_code(session: AsyncSession, gateway_mac: MACAddress) -
 @router.post("/add")
 async def add_gateway(
     session: Session,
-    template: Templater,
     gateway_mac: Annotated[str, Form()],
     background_tasks: BackgroundTasks,
 ) -> HTMLResponse:
@@ -45,20 +57,19 @@ async def add_gateway(
     psk = token_hex(32)
     gateways_codes_psks[gateway_mac] = (access_code, psk)
     background_tasks.add_task(timeout_gateway_code, session, gateway_mac)
-    return template("add_gateway.html", access_code=access_code)
+    return ul[li[f"Access code : {access_code}"]]
 
 
 """
 @router.get("/psk")
 async def show_psk(
-    session: Session, template: Templater, gateway_mac: Annotated[str, Form()]
+    session: Session, gateway_mac: Annotated[str, Form()]
 ) -> HTMLResponse:
     gateway_mac = MACAddress(gateway_mac)
     if gateway_mac not in gateways_codes_psks:
         return
     _, psk = gateways_codes_psks.pop(gateway_mac)
     await crud_gateway.add_gateway(session, gateway_mac, psk)
-    return template("add_gateway_psk.html", psk=psk)
 """
 
 

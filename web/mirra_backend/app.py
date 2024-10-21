@@ -2,7 +2,6 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 
 from mirra_backend.config import config
 from mirra_backend.data.database import global_init
@@ -20,7 +19,6 @@ async def lifespan(app: FastAPI):
     else:
         print("MQTT has been disabled. The broker and parser will not be started.")
     configure_routes()
-    configure_templates()
     yield
 
 
@@ -45,13 +43,6 @@ def configure_mqtt() -> None:
     mqtt_parser.start()
 
 
-def configure_templates() -> None:
-    from mirra_backend.vite_loader import vite_asset, vite_hmr_client
-
-    templates.env.globals["vite_asset"] = vite_asset
-    templates.env.globals["vite_hmr_client"] = vite_hmr_client
-
-
 def configure_routes() -> None:
     if not config.vite_dist_folder.exists():
         raise FileNotFoundError(
@@ -72,4 +63,3 @@ def configure_routes() -> None:
 
 
 app = FastAPI(lifespan=lifespan)
-templates = Jinja2Templates(directory=config.templates_folder)
