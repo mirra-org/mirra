@@ -23,10 +23,12 @@ async def lifespan(app: FastAPI):
 
 
 def configure_db() -> None:
-    global_init()
     if not config.db_file.exists():
         config.db_file.parent.mkdir(parents=True, exist_ok=True)
+        global_init()
         prepopulate_sync()
+    else:
+        global_init()
     config.location_images_folder.mkdir(parents=True, exist_ok=True)
     if not config.mqtt_psk_file.exists():
         config.mqtt_psk_file.parent.mkdir(parents=True, exist_ok=True)
