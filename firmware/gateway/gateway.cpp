@@ -101,11 +101,6 @@ void Gateway::discovery()
     Log::info("Starting discovery...");
     while (true)
     {
-        if (nodes.size() >= MAX_SENSOR_NODES)
-        {
-            Log::info("Could not run discovery because maximum amount of nodes has been reached.");
-            return;
-        }
         Log::info("Awaiting discovery message...");
         auto hello{lora.listenMessage<HELLO>(DISCOVERY_TIMEOUT, pins.bootPin)};
         if (!hello)
@@ -130,6 +125,11 @@ void Gateway::discovery()
         }
         else
         {
+            if (nodes.size() >= MAX_SENSOR_NODES)
+            {
+                Log::info("Could not add node because maximum amount of nodes has been reached.");
+                return;
+            }
             uint32_t commTime{std::all_of(nodes.cbegin(), nodes.cend(), lambdaIsLost)
                                   ? cTime + commInterval
                                   : nextScheduledCommTime()};
