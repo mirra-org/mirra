@@ -37,7 +37,7 @@ def prepopulate_sync() -> None:
 
 async def _prepopulate(session: AsyncSession, folder: Path) -> None:
     for table in SqlAlchemyBase.metadata.sorted_tables:
-        print(f"Prefilling database with table '{table.name}'...")
+        log.info(f"Prefilling database with table '{table.name}'...")
         file_path = folder / f"{table.name}.json"
         if not file_path.exists():
             continue

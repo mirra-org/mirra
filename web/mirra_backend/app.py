@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
@@ -7,17 +8,22 @@ from mirra_backend.config import config
 from mirra_backend.data.database import global_init
 from mirra_backend.data.prepopulation import prepopulate_sync
 from mirra_backend.exceptions import MIRRAException, custom_exception_handler
+from mirra_backend.log import init_log, configure_app_logging
+
+log = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("Starting MIRRA web service...")
+    init_log()
+    log.info("Starting MIRRA web service...")
+    configure_app_logging()
     configure_db()
     if config.mqtt_enabled:
-        print("Starting MQTT broker and parser...")
+        log.info("Starting MQTT broker and parser...")
         configure_mqtt()
     else:
-        print("MQTT has been disabled. The broker and parser will not be started.")
+        log.info("MQTT has been disabled. The broker and parser will not be started.")
     configure_routes()
     yield
 
