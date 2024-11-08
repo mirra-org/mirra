@@ -50,6 +50,6 @@
 
 #define MAX_SENSORDATA_FILESIZE 512 * 1024 // bytes
 
-#define MAX_SENSOR_NODES 20
+#define MAX_SENSOR_NODES 35
 
 #endif
