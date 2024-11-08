@@ -11,7 +11,7 @@
 // Communication and sensor settings
 #define WAKE_BEFORE_COMM_PERIOD                                                                    \
     3 // s, time before comm period when node should wake from deep sleep
-#define WAKE_COMM_PERIOD(X) ((X)-WAKE_BEFORE_COMM_PERIOD)
+#define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
 
 #define DEFAULT_SAMPLING_INTERVAL                                                                  \
     (60 * 60) // s, default sensor sampling interval to resort to when no communication with gateway
@@ -28,7 +28,6 @@
 #define SENSOR_DATA_TIMEOUT 6000 // ms
 #define SENSOR_DATA_ATTEMPTS 1
 
-#define MAX_SENSORDATA_FILESIZE 32 * 1024 // bytes
 #define MAX_SENSORS 20
 
 // Sensor pins

@@ -11,7 +11,7 @@
 
 // MQTT settings
 #define MQTT_SERVER "mirra.ugent.be"
-#define MQTT_PORT 1883
+#define MQTT_PORT 8883
 #define MQTT_PSK ""
 #define TOPIC_PREFIX                                                                               \
     "mirra" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
@@ -43,8 +43,6 @@
 
 #define SENSOR_DATA_TIMEOUT 6000 // ms
 #define SENSOR_DATA_ATTEMPTS 1
-
-#define MAX_SENSORDATA_FILESIZE 512 * 1024 // bytes
 
 #define MAX_SENSOR_NODES 35
 
