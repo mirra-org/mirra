@@ -1,3 +1,4 @@
+import logging
 from time import sleep
 from typing import Any
 
@@ -8,6 +9,8 @@ from paho.mqtt.reasoncodes import ReasonCode
 
 from mirra_backend.config import config
 from mirra_backend.crud.measurement import process_measurement_sync
+
+log = logging.getLogger(__name__)
 
 
 class _MQTTParser:
@@ -26,7 +29,7 @@ class _MQTTParser:
         properties: Properties | None,
     ) -> None:
         client.subscribe(config.mqtt_prefix)
-        print(
+        log.info(
             f"mqtt parser connected to broker with prefix {config.mqtt_prefix}. Result reason: {reason}"
         )
 
@@ -47,10 +50,10 @@ class _MQTTParser:
             try:
                 self.client.connect(config.mqtt_host, config.mqtt_port, 60)
                 self.client.loop_start()
-                print("mqtt parser background thread started")
+                log.info("mqtt parser background thread started")
                 return
             except ConnectionRefusedError:
-                print(
+                log.info(
                     f"mqtt parser connection to {config.mqtt_host}:{config.mqtt_port} refused. Retrying in 2s..."
                 )
                 sleep(2)

@@ -1,3 +1,4 @@
+import logging
 import struct
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -6,8 +7,10 @@ from mirra_backend.data.measurement import Measurement
 from mirra_backend.types.mac_address import MACAddress
 
 from .common import inject_session_sync
-from .node import add_node, get_current_node
+from .node import add_node
 from .sensor import get_sensor
+
+log = logging.getLogger(__name__)
 
 
 async def add_measurement(
@@ -48,7 +51,7 @@ async def process_measurement(
     payload = payload[6:]  # skip over mac
     timestamp: int = struct.unpack("I", payload[:4])[0]
     payload = payload[5:]  # skip over timestamp, flags
-    print(f"sensor message: {gateway_mac}-{node_mac}-{timestamp}")
+    log.info(f"sensor message: {gateway_mac}-{node_mac}-{timestamp}")
     instance_tags: dict[int, int] = {}
     while len(payload) > 0:
         sensor_key: int = payload[0]
@@ -56,7 +59,7 @@ async def process_measurement(
             instance_tags[sensor_key] = 0
 
         value: float = struct.unpack("f", payload[2:6])[0]
-        print(f"    sensor value: {sensor_key}-{instance_tags[sensor_key]}: {value}")
+        log.info(f"    sensor value: {sensor_key}-{instance_tags[sensor_key]}: {value}")
 
         await add_measurement(
             session,
