@@ -32,7 +32,6 @@ Message<TIME_CONFIG> Node::currentTimeConfig(const MACAddress& src, uint32_t cTi
 }
 
 RTC_DATA_ATTR bool initialBoot{true};
-RTC_DATA_ATTR int commPeriods{0};
 
 RTC_DATA_ATTR char ssid[33]{WIFI_SSID};
 RTC_DATA_ATTR char pass[33]{WIFI_PASS};
@@ -71,10 +70,8 @@ void Gateway::wake()
 {
     Log::debug("Running wake()...");
     if (!nodes.empty() && rtc.getSysTime() >= (WAKE_COMM_PERIOD(nodes[0].getNextCommTime()) - 3))
-        commPeriod();
-    // send data to server only every UPLOAD_EVERY comm periods
-    if (commPeriods >= UPLOAD_EVERY)
     {
+        commPeriod();
         uploadPeriod();
     }
     Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
@@ -233,7 +230,6 @@ void Gateway::commPeriod()
     {
         file.push(m);
     }
-    commPeriods++;
 }
 
 uint32_t Gateway::nextScheduledCommTime()
@@ -412,7 +408,6 @@ void Gateway::uploadPeriod()
     {
         Log::error("WiFi not connected. Aborting upload to MQTT server...");
     }
-    commPeriods = 0;
 }
 
 void Gateway::parseNodeUpdate(char* update)

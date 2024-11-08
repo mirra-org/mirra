@@ -32,10 +32,6 @@
 #define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
 #define LISTEN_COMM_PERIOD(X) ((X) - COMM_PERIOD_PADDING)
 
-#define UPLOAD_EVERY                                                                               \
-    3 // amount of times the gateway will communicate with the nodes before uploading data to the
-      // server
-
 #define DEFAULT_SAMPLE_INTERVAL (20 * 60) // s, time between sensor sampling for every node
 #define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
 #define DEFAULT_SAMPLE_OFFSET (0)
