@@ -9,7 +9,7 @@ char* MACAddress::toString(char* string) const
     return string;
 }
 
-MACAddress MACAddress::fromString(char* string)
+MACAddress MACAddress::fromString(const char* string)
 {
     MACAddress mac{};
     uint8_t* address = mac.getAddress();

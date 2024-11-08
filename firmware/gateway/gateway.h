@@ -84,6 +84,10 @@ private:
         CommandCode changeIntervals();
         /// @brief Forces a discovery period.
         CommandCode discovery();
+        /// @brief Forcibly removes a node from the gateway. Use only when the to-be removed node
+        /// has errored or has verifiably stopped transmitting.
+        /// @param macString MAC address in the "00:00:00:00:00:00" format.
+        CommandCode removeNode(const char* macString);
         /// @brief Convenience command that configures WiFi, RTC and server settings.
         CommandCode setup();
         /// @brief Prints scheduling information about the connected nodes, including MAC address,
@@ -107,6 +111,7 @@ private:
                                 CommandAliasesPair(&Commands::changeServer, "server"),
                                 CommandAliasesPair(&Commands::changeIntervals, "intervals"),
                                 CommandAliasesPair(&Commands::discovery, "discovery"),
+                                CommandAliasesPair(&Commands::removeNode, "removenode"),
                                 CommandAliasesPair(&Commands::setup, "setup"),
                                 CommandAliasesPair(&Commands::printSchedule, "printschedule"),
                                 CommandAliasesPair(&Commands::testMQTT, "testmqtt")));
@@ -152,6 +157,7 @@ private:
     /// @brief Updates the nodes stored on the local NVS filesystem. Used to retain the Nodes
     /// objects through deep sleep.
     void storeNodes();
+    void removeNode(Node& node);
 
     /// @brief Initiates a gateway-wide communication period.
     void commPeriod();

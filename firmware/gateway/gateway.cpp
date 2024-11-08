@@ -152,7 +152,7 @@ void Gateway::discovery()
                        candidate.toString(), ". Aborting discovery.");
             if (!duplicate)
                 nodes.pop_back();
-            return;
+            continue;
         }
 
         Log::info("Node ", timeAck->getSource().toString(), " has been registered.");
@@ -182,6 +182,18 @@ void Gateway::storeNodes()
                 MACAddress::length);
         nvsNodes.getValue<Node>(key, defaultNode) = node;
     }
+}
+
+void Gateway::removeNode(Node& node)
+{
+    fs::NVS nvsNodes{"nodes"};
+    char key[7]{0};
+    strncpy(key, reinterpret_cast<const char*>(node.getMACAddress().getAddress()),
+            MACAddress::length);
+    nvsNodes.eraseKey(key);
+    nvsNodes.commit();
+    nodes.clear();
+    loadNodes();
 }
 
 void Gateway::commPeriod()
@@ -630,6 +642,20 @@ CommandCode Gateway::Commands::changeIntervals()
 CommandCode Gateway::Commands::discovery()
 {
     parent->discovery();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::removeNode(const char* macString)
+{
+    auto mac{parent->macToNode(MACAddress::fromString(macString))};
+    if (mac)
+    {
+        parent->removeNode(*mac);
+    }
+    else
+    {
+        Serial.printf("No valid node found for MAC address '%s'.\n", macString);
+    }
     return COMMAND_SUCCESS;
 }
 

@@ -35,7 +35,7 @@ public:
     /// @param string The hex string from which to construct the MAC address in the
     /// "00:00:00:00:00:00" format.
     /// @return The constructed MAC address.
-    static MACAddress fromString(char* string);
+    static MACAddress fromString(const char* string);
 
     /// @brief Size of the MAC address in bytes.
     static constexpr size_t length = sizeof(address);
