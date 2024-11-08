@@ -59,7 +59,8 @@ def configure_routes() -> None:
     app.include_router(export.router)
     app.include_router(gateway.router)
     app.include_router(index.router)
-    app.add_exception_handler(MIRRAException, custom_exception_handler)
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan, exception_handlers={MIRRAException: custom_exception_handler}
+)
