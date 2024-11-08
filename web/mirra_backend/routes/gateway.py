@@ -24,8 +24,13 @@ async def add_gateway_page() -> HTMLResponse:
                 h3["add gateway form"],
                 form(hx_post="/gateway/add", hx_target="next div")[
                     label["gateway mac address"],
-                    input(name="gateway_mac"),
-                    button(class_="btn primary")["Submit"],
+                    input(
+                        name="gateway_mac",
+                        pattern="^([0-9A-F]{2}:){5}([0-9A-F]{2})$",
+                        placeholder="XX:XX:XX:XX:XX:XX",
+                        autocapitalize="characters",
+                    ),
+                    button(".btn primary")["Submit"],
                 ],
                 div,
             ],
