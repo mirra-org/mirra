@@ -1,4 +1,5 @@
 import struct
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -6,7 +7,7 @@ from mirra_backend.data.measurement import Measurement
 from mirra_backend.types.mac_address import MACAddress
 
 from .common import inject_session_sync
-from .node import add_node, get_current_node
+from .node import add_node
 from .sensor import get_sensor
 
 
@@ -25,8 +26,13 @@ async def add_measurement(
     sensor = await get_sensor(session, sensor_key)
     if sensor is None:
         return None
+    insertion_timestamp = datetime.now(timezone.utc)
     measurement = Measurement(
-        node=node, timestamp=timestamp, value=value, sensor_id=sensor_key
+        node=node,
+        timestamp=timestamp,
+        insertion_timestamp=insertion_timestamp,
+        value=value,
+        sensor_id=sensor_key,
     )
 
     session.add(measurement)

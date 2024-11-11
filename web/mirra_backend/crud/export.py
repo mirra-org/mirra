@@ -29,6 +29,7 @@ async def export_all_csv(session: Session) -> str:
     writer.writerow(
         (
             "timestamp(utc)",
+            "insertion_timestamp(utc)",
             "gateway_mac",
             "node_mac",
             "value",
@@ -44,6 +45,7 @@ async def export_all_csv(session: Session) -> str:
         writer.writerow(
             (
                 meas.timestamp_iso,
+                meas.insertion_timestamp_iso,
                 gateway.physical_module.mac,
                 node.physical_module.mac,
                 meas.value,

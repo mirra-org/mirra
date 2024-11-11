@@ -11,6 +11,7 @@ class Measurement(SqlAlchemyBase):
 
     id: orm.Mapped[int] = orm.mapped_column(primary_key=True)
     timestamp: orm.Mapped[int]
+    insertion_timestamp: orm.Mapped[int]
     value: orm.Mapped[float]
 
     node_id: orm.Mapped[int] = orm.mapped_column(
@@ -26,3 +27,7 @@ class Measurement(SqlAlchemyBase):
     @property
     def timestamp_iso(self) -> str:
         return str(datetime.fromtimestamp(self.timestamp, tz=timezone.utc))
+
+    @property
+    def insertion_timestamp_iso(self) -> str:
+        return str(datetime.fromtimestamp(self.insertion_timestamp, tz=timezone.utc))
