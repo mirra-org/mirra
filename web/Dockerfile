@@ -44,7 +44,7 @@ RUN pnpm install -P
 # run pnpm vite build
 RUN pnpm build
 
-FROM python:3.11-slim AS mirra-web
+FROM python:3.12-slim AS mirra-web
 #install mosquitto
 RUN apt-get update \
     && apt-get install --no-install-recommends -y \
