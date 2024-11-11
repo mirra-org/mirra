@@ -266,6 +266,24 @@ files = [
 ]
 
 [[package]]
+name = "htpy"
+version = "24.9.1"
+description = "htpy - HTML in Python"
+optional = false
+python-versions = ">=3.10"
+files = [
+    {file = "htpy-24.9.1-py3-none-any.whl", hash = "sha256:e19975b193943122e2020a7c0cb93cf7ed5fa44bd4a9fbf4e71f1bd09ec5ae8d"},
+    {file = "htpy-24.9.1.tar.gz", hash = "sha256:ddafc31354e0226f86ccc4bd312b1592895441e43d2c07b6b9e3168267294b3b"},
+]
+
+[package.dependencies]
+markupsafe = ">=2.0.0"
+
+[package.extras]
+dev = ["black", "django", "django-stubs", "flit", "httpx", "jinja2", "mypy", "pre-commit", "pyright", "pytest", "ruff", "starlette"]
+docs = ["mkdocs-material (==9.5.12)"]
+
+[[package]]
 name = "idna"
 version = "3.10"
 description = "Internationalized Domain Names in Applications (IDNA)"
@@ -289,23 +307,6 @@ files = [
     {file = "iniconfig-2.0.0-py3-none-any.whl", hash = "sha256:b6a85871a79d2e3b22d2d1b94ac2824226a63c6b741c88f7ae975f18b6778374"},
     {file = "iniconfig-2.0.0.tar.gz", hash = "sha256:2d91e135bf72d31a410b17c16da610a82cb55f6b0477d1a902134b24a455b8b3"},
 ]
-
-[[package]]
-name = "jinja2"
-version = "3.1.4"
-description = "A very fast and expressive template engine."
-optional = false
-python-versions = ">=3.7"
-files = [
-    {file = "jinja2-3.1.4-py3-none-any.whl", hash = "sha256:bc5dd2abb727a5319567b7a813e6a2e7318c39f4f487cfe6c89c6f9c7d25197d"},
-    {file = "jinja2-3.1.4.tar.gz", hash = "sha256:4a3aee7acbbe7303aede8e9648d13b8bf88a429282aa6122a993f0ac800cb369"},
-]
-
-[package.dependencies]
-MarkupSafe = ">=2.0"
-
-[package.extras]
-i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "markupsafe"
@@ -888,4 +889,4 @@ standard = ["colorama (>=0.4)", "httptools (>=0.5.0)", "python-dotenv (>=0.13)",
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.12"
-content-hash = "16d3abb1ac5def48270ac9d8aa980ba5005a3dd1e56c854f8642eb6375f8c824"
+content-hash = "3c8cb441f0757852abdcd036bcda260ae928ec6b933691ede54178cafd8a273c"

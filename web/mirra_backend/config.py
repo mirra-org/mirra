@@ -29,8 +29,6 @@ class Config(BaseSettings):
     db_file: Path = root_dir / "db/db.sqlite"
     db_prefill: DBPrefill = DBPrefill.default
 
-    templates_folder: Path = root_dir / "mirra_backend/templates"
-
     prepopulation_folder: Path = root_dir / "mirra_backend/data/prepopulation"
 
     location_images_folder: Path = root_dir / "db/location_images"
@@ -42,6 +40,8 @@ class Config(BaseSettings):
     mqtt_broker_config_file: Path = root_dir / "mosquitto/mosquitto.conf"
     mqtt_psk_file: Path = root_dir / "db/gateways.psk"
 
+    log_file: Path | None = None
+
     vite_dist_folder: Path = root_dir / "front/dist"
     vite_host: str = "127.0.0.1"
     vite_port: int = 5173
@@ -52,15 +52,17 @@ class Config(BaseSettings):
 
     @field_validator(
         "db_file",
-        "templates_folder",
         "prepopulation_folder",
         "location_images_folder",
         "mqtt_broker_config_file",
         "mqtt_psk_file",
         "vite_dist_folder",
+        "log_file",
     )
     @classmethod
-    def make_path_absolute(cls, value: str) -> Path:
+    def make_path_absolute(cls, value: str | None) -> Path:
+        if value is None:
+            return None
         path = Path(value)
         if not path.is_absolute():
             return (root_dir / Path(value)).resolve()
