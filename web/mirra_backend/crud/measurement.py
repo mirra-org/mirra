@@ -29,7 +29,7 @@ async def add_measurement(
     sensor = await get_sensor(session, sensor_key)
     if sensor is None:
         return None
-    insertion_timestamp = datetime.now(timezone.utc)
+    insertion_timestamp = int(datetime.now(timezone.utc).timestamp())
     measurement = Measurement(
         node=node,
         timestamp=timestamp,
