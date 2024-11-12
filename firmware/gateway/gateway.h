@@ -84,6 +84,9 @@ private:
         CommandCode changeIntervals();
         /// @brief Forces a discovery period.
         CommandCode discovery();
+        /// @brief Forcibly adds a node to the gateway. Use only when the added node is already
+        /// bound to this gateway.
+        CommandCode addNode();
         /// @brief Forcibly removes a node from the gateway. Use only when the to-be removed node
         /// has errored or has verifiably stopped transmitting.
         /// @param macString MAC address in the "00:00:00:00:00:00" format.
@@ -111,6 +114,7 @@ private:
                                 CommandAliasesPair(&Commands::changeServer, "server"),
                                 CommandAliasesPair(&Commands::changeIntervals, "intervals"),
                                 CommandAliasesPair(&Commands::discovery, "discovery"),
+                                CommandAliasesPair(&Commands::addNode, "addnode"),
                                 CommandAliasesPair(&Commands::removeNode, "removenode"),
                                 CommandAliasesPair(&Commands::setup, "setup"),
                                 CommandAliasesPair(&Commands::printSchedule, "printschedule"),

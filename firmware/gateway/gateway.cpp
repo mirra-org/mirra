@@ -515,11 +515,8 @@ CommandCode Gateway::Commands::rtcSet()
                       timeBuffer->data());
         return COMMAND_ERROR;
     }
-    else
-    {
-        strftime(timeStr, sizeof(timeStr), "%F %T", &tm);
-        Serial.printf("New time successfully set to '%s'\n", timeStr);
-    }
+    strftime(timeStr, sizeof(timeStr), "%F %T", &tm);
+    Serial.printf("New time successfully set to '%s'\n", timeStr);
     ctime = mktime(&tm);
     parent->rtc.writeTime(static_cast<uint32_t>(ctime));
     parent->rtc.setSysTime();
@@ -637,6 +634,42 @@ CommandCode Gateway::Commands::changeIntervals()
 CommandCode Gateway::Commands::discovery()
 {
     parent->discovery();
+    return COMMAND_SUCCESS;
+}
+
+CommandCode Gateway::Commands::addNode()
+{
+    Serial.printf("Enter the node's MAC address:\n");
+    auto macBuffer{CommandParser::readLine()};
+    if (!macBuffer)
+        return COMMAND_TIMEOUT;
+    MACAddress mac{MACAddress::fromString(macBuffer->data())};
+    Serial.printf(
+        "Enter the next communication time for node '%s' (format: '2000-03-23 14:32:01'):\n",
+        mac.toString());
+    auto timeBuffer{CommandParser::readLine()};
+    if (!timeBuffer)
+        return COMMAND_TIMEOUT;
+    tm tm{};
+    if (strptime(timeBuffer->data(), "%F %T", &tm) == nullptr)
+    {
+        Serial.printf("Could not parse '%s' as a date/time value. Ensure the format '2000-03-23 "
+                      "14:32:01' is respected.\n",
+                      timeBuffer->data());
+        return COMMAND_ERROR;
+    }
+    uint32_t commTime{static_cast<uint32_t>(mktime(&tm))};
+    Message<TIME_CONFIG> timeConfig(mac, mac, 0, sampleInterval, sampleRounding, sampleOffset,
+                                    commInterval, commTime,
+                                    MAX_MESSAGES(commInterval, sampleInterval));
+    if (parent->nodes.size() >= MAX_SENSOR_NODES)
+    {
+        Serial.printf("Maximum amount of nodes reached. This node will not be added.\n");
+        return COMMAND_SUCCESS;
+    }
+    parent->nodes.emplace_back(timeConfig);
+    parent->storeNodes();
+    Serial.printf("Node %s added.\n", mac.toString());
     return COMMAND_SUCCESS;
 }
 
