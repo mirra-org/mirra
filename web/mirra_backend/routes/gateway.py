@@ -28,7 +28,6 @@ async def add_gateway_page() -> HTMLResponse:
                         name="gateway_mac",
                         pattern="^([0-9A-F]{2}:){5}([0-9A-F]{2})$",
                         placeholder="XX:XX:XX:XX:XX:XX",
-                        autocapitalize="characters",
                     ),
                     button(".btn primary")["Submit"],
                 ],
@@ -62,7 +61,7 @@ async def add_gateway(
     psk = token_hex(32)
     gateways_codes_psks[gateway_mac] = (access_code, psk)
     background_tasks.add_task(timeout_gateway_code, session, gateway_mac)
-    return ul[li[f"Access code : {access_code}"]]
+    return HTMLResponse(ul[li[f"Access code : {access_code}"]])
 
 
 """
