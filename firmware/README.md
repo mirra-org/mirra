@@ -3,26 +3,13 @@
 This folder contains all the firmwares necessary to set up a MIRRA installation. It is set up as a single PlatformIO project where each different firmware is configured as a seperate PlatformIO 'environment'. 
 To initiate a firmware upload, hold the boot button and press the reset button (multiple tries may be necessary), then initiate the upload from the PlatformIO console.
 
-## On RESET:
-Local filesystem data stored in the module will be cleared, but logs will remain intact. Data stored in attached SD cards is not removed (ESPCam picture data is always retained).
-
-Nodes will listen for any gateway discovery broadcasts for 5 minutes. If no gateway is found in this time, the node will default to a set sampling interval, but will never communicate. Manual `discovery` can always be initialised from the command line interface.
-
-Gateways will attempt to connect to WiFi and configure their RTC on initial startup. If the preprogrammed credentials for WiFi are incorrect, this will inevitably result in failure and manual `wifi` and `rtc` will have to be initialised from the command line interface.
-
-## Log Level
-
-The gateway and the sensor nodes publish log messages to both the serial monitor (if one is connected) and the local filesystem. These messages can be filtered according to log level.
-
-It is recommended to set the log level to either **INFO** or **ERROR**, as **DEBUG** tends to fill up the filesystem very quickly, rendering the system inoperable. Alternatively, logging to file can be disabled.
-
 ## Command Line Interface
 
 Both the gateway and the sensor nodes can be interacted with via a serial monitor using a command line interface, either using PlatformIO's built in monitor command or a terminal emulator with similar functionality like PuTTY.
 
 To enter a given module's command mode, hold the BOOT button. This will wake up the module and, if held properly, make it enter the command phase. On success, the module should print a message signifying that command phase has been entered.
 
-Note: While in command line mode, the module cannot execute any other function, meaning it can miss sampling or communication periods. While the command phase should automatically timeout after one minute, it is still recommended to `exit` command mode and let the module return to sleep as soon as possible.
+Note: While in command line mode, the module cannot execute any other function, meaning it can miss sampling or communication periods. While the command phase should automatically timeout after one minute, it is still recommended to `exit` command mode to let the module return to sleep as soon as possible.
 
 ### Common Commands
 
@@ -30,31 +17,44 @@ The following commands are available to both gateway and nodes:
 
 - `exit` or `close`: Exits command phase. The module will most likely enter sleep right after this.
 
-- `ls` or `list`: Lists all the files currently housed in the filesystem.
+- `echo ARG`: echoes `ARG` to the serial output. Used for testing purposes.
 
-- `print ARG` or `printfile ARG`: Prints the file with name `ARG` to the serial output.
+- `setlog ARG` or `setloglevel ARG` : sets the current logging level to `ARG`: all log messages on and below this level will be printed and saved in the logging file. Pick from `DEBUG`, `INFO` and `ERROR`.
 
-- `printhex ARG` or `printfilehex ARG`: Prints the file with name `ARG` to the serial output, interpreted in hexadecimal notation. Useful for pure binary files (ending in .dat).
+- `printlog` or `printlogs` or `printlogfile`: prints the entire logfile to the serial output. Depending on its size, this may take some time.
 
-- `remove ARG` or `rm ARG`: Removes the file `ARG` from the filesystem if it exists and if it is not currently in use.
+- `printdata` or `printdatafile`: Prints all stored data to the serial output in a human-readable format. Depending on the amount of data stored, this may take some time.
 
-- `touch ARG`: Creates an empty file with the name `ARG` on the filesystem.
+- `printdataraw` or `printdatahex`: Prints all stored data to the serial output in a hexadecimal format.
 
 - `format`: Formats the filesystem. This effectively removes all the data stored in flash, and subsequently resets the module.
 
--  `echo ARG`: echoes `ARG` to the serial output.
+- `spam COUNT`: Spams the logfile with a preset message repeated `COUNT` times. Used for testing purposes.
+
 
 ### Gateway Commands
 
 The following commands are exclusive to the gateway:
 
-- `discovery`: Broadcasts initial discovery message (make sure RTC and WiFi are properly configured at this point!).
+- `wifi`: Enters an interactive mode in which the WiFi SSID and password can be changed. On a successful connect, the newly provided credentials will be stored and used for future connections,
 
-- `discoveryloop ARG`: Sends a discovery message every 2.5 minutes, `ARG` times.
+- `rtc`: Updates the module's time via the Network Time Protocol (NTP) and applies it to the RTC module. WiFi required.
 
-- `rtc`: Attempts to configure the RTC time using WiFi.
+- `rtcreset`: Forcibly resets the gateway's time to `2000-01-01 00:00:00` and applies it to the RTC module.
 
-- `wifi`: Enters wifi configuration mode, in which the wifi SSID and password can be entered and checked. If the new credentials are correct and connection is sucessful, the gateway will remember and henceforth use the given credentials whenever connecting to WiFi.
+- `rtcset TIME`: Sets the gateway's time to `TIME`, where `TIME` is of format `'2000-03-23 14:32:01'`.
+
+- `server`: Enters an interactive mode in which the connection (URL, port and PSK) to the web server may be configured.
+
+- `intervals`: Enters an interactive mode in which the gateway's default intervals (comm interval, sample interval, sample rounding, sample offset) may be changed. Newly added nodes will assume these intervals by default.
+
+- `discovery`: Enters a listening loop for discovery messages from nearby nodes. The gateway will answer with relevant configuration for the node, and will then add the node to its interal list of nodes on success. This loop may only be exited by pressing the BOOT button.
+
+- `addNode`: Enters an interactive mode to forcibly add a node to the gateway. Use only when the added node is already bound to the gateway with total certainty.
+
+- `removeNode MAC`: Forcibly removes a node with the address `MAC`from the gateway. Use only when the to-be removed node has errored or has verifiably stopped transmitting.
+
+- `setup`: Convenience command that executes `wifi`, `rtc` and `server` sequentially after each other.
 
 - `printschedule` : Prints scheduling information about the connected nodes, including MAC address, next comm time, sample interval and max number of messages per comm period.
 
@@ -62,7 +62,7 @@ The following commands are exclusive to the gateway:
 
 The following commands are exclusive to the sensor nodes:
 
-- `discovery`: Enter listening mode for a discovery message from a gateway for 5 minutes. It is highly advised to only have one sensor node in listening mode at a time, as multiple nodes attempting to answer the broadcast will likely fail.
+- `discovery`: Manually triggers the sending of a discovery message. Since nodes automatically send a discovery message on RESET, this should not be necessary.
 
 - `sample` : Forcefully initiates a sample period. This samples the sensors and stores the resulting data in the local data file, which will be sent to the gateway. This may impact sensor scheduling.
 

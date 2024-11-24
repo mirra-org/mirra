@@ -97,7 +97,7 @@ private:
         CommandCode changeServer();
         /// @brief Change settings like communication and sampling interval.
         CommandCode changeIntervals();
-        /// @brief Forces a discovery period.
+        /// @brief Starts a discovery period.
         CommandCode discovery();
         /// @brief Forcibly adds a node to the gateway. Use only when the added node is already
         /// bound to this gateway.
@@ -166,7 +166,8 @@ private:
 
     public:
         Parameters()
-            : nvs{"parameters"}, wifiSsid{nvs.getValue<std::array<char, 33>>("wifiSsid", defaultWifiSsid)},
+            : nvs{"parameters"},
+              wifiSsid{nvs.getValue<std::array<char, 33>>("wifiSsid", defaultWifiSsid)},
               wifiPass{nvs.getValue<std::array<char, 33>>("wifiPass", defaultWifiPass)},
               mqttServer{nvs.getValue<std::array<char, 65>>("mqttServer", defaultMqttServer)},
               mqttPort{nvs.getValue<uint16_t>("mqttPort", defaultMqttPort)},
@@ -177,12 +178,12 @@ private:
               commInterval{nvs.getValue<uint32_t>("commInterval", defaultCommInterval)}
         {}
 
-        fs::NVS::Value<std::array<char,33>> wifiSsid;
-        fs::NVS::Value<std::array<char,33>> wifiPass;
+        fs::NVS::Value<std::array<char, 33>> wifiSsid;
+        fs::NVS::Value<std::array<char, 33>> wifiPass;
 
-        fs::NVS::Value<std::array<char,65>> mqttServer;
+        fs::NVS::Value<std::array<char, 65>> mqttServer;
         fs::NVS::Value<uint16_t> mqttPort;
-        fs::NVS::Value<std::array<char,65>> mqttPsk;
+        fs::NVS::Value<std::array<char, 65>> mqttPsk;
 
         fs::NVS::Value<uint32_t> sampleInterval;
         fs::NVS::Value<uint32_t> sampleRounding;
