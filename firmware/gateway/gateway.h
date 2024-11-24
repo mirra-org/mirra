@@ -44,6 +44,21 @@ public:
     /// @return A Time Config message that yields the same exact configuration as this node.
     Message<TIME_CONFIG> currentTimeConfig(const MACAddress& src, uint32_t cTime);
 
+    // TODO: Instead of using this lambda to determine if a node is lost, use a bool stored in each
+    // node that signifies if a node is ' well-scheduled ', implying both that the node is not lost
+    // and that it follows the scheduled comm time of the previous node tightly (i.e., without
+    // scheduling gaps). Removal of a node would imply loss of well-scheduledness of all following
+    // nodes, and changing of the comm period would imply loss of well-scheduledness for all nodes.
+    // Currently only the latter portion of this functionality is available with just the isLost
+    // lambda, During the comm period, a node that is not 'well-scheduled' would be scheduled so
+    // that it would become so.
+
+    bool isLost(uint32_t commInterval) const { return this->commInterval != commInterval; };
+    static auto bindIsLost(uint32_t commInterval)
+    {
+        return std::bind(&Node::isLost, std::placeholders::_1, commInterval);
+    }
+
     const MACAddress& getMACAddress() const { return mac; }
     uint32_t getSampleInterval() const { return sampleInterval; }
     uint32_t getSampleRounding() const { return sampleRounding; }
@@ -145,11 +160,43 @@ private:
         bool clientConnect();
     };
 
+    class Parameters
+    {
+        fs::NVS nvs;
+
+    public:
+        Parameters()
+            : nvs{"parameters"}, wifiSsid{nvs.getValue<std::array<char, 33>>("wifiSsid", defaultWifiSsid)},
+              wifiPass{nvs.getValue<std::array<char, 33>>("wifiPass", defaultWifiPass)},
+              mqttServer{nvs.getValue<std::array<char, 65>>("mqttServer", defaultMqttServer)},
+              mqttPort{nvs.getValue<uint16_t>("mqttPort", defaultMqttPort)},
+              mqttPsk{nvs.getValue<std::array<char, 65>>("mqttPsk", defaultMqttPsk)},
+              sampleInterval{nvs.getValue<uint32_t>("sampleInterval", defaultSampleInterval)},
+              sampleRounding{nvs.getValue<uint32_t>("sampleRounding", defaultSampleRounding)},
+              sampleOffset{nvs.getValue<uint32_t>("sampleOffset", defaultSampleOffset)},
+              commInterval{nvs.getValue<uint32_t>("commInterval", defaultCommInterval)}
+        {}
+
+        fs::NVS::Value<std::array<char,33>> wifiSsid;
+        fs::NVS::Value<std::array<char,33>> wifiPass;
+
+        fs::NVS::Value<std::array<char,65>> mqttServer;
+        fs::NVS::Value<uint16_t> mqttPort;
+        fs::NVS::Value<std::array<char,65>> mqttPsk;
+
+        fs::NVS::Value<uint32_t> sampleInterval;
+        fs::NVS::Value<uint32_t> sampleRounding;
+        fs::NVS::Value<uint32_t> sampleOffset;
+        fs::NVS::Value<uint32_t> commInterval;
+    };
+
     std::vector<Node> nodes;
     /// @brief Returns the local node corresponding to the MAC address.
     /// @param mac The MAC address string in the "00:00:00:00:00:00" format.
     /// @return A reference to the matching node. Disenaged if no match is found.
     std::optional<std::reference_wrapper<Node>> macToNode(const MACAddress& mac);
+
+    Parameters parameters;
 
     /// @brief Sends a single discovery message, storing the new node and configuring its timings if
     /// there is a response.

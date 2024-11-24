@@ -1,18 +1,21 @@
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
-
+#include <array>
+#include <cstdint>
 // Pin definitions
 #include "pins_sensornode_rev5.h"
 
 // WiFi settings
-#define WIFI_SSID "GontrodeWiFi2"
-#define WIFI_PASS "b5uJeswA"
+constexpr std::array<char, 33> defaultWifiSsid{"GontrodeWiFi2"};
+constexpr std::array<char, 33> defaultWifiPass{"b5uJeswA"};
+
 #define NTP_URL "be.pool.ntp.org"
 
 // MQTT settings
-#define MQTT_SERVER "mirra.ugent.be"
-#define MQTT_PORT 8883
-#define MQTT_PSK ""
+constexpr std::array<char, 65> defaultMqttServer{"mirra.ugent.be"};
+constexpr uint16_t defaultMqttPort = 8883;
+constexpr std::array<char, 65> defaultMqttPsk{""};
+
 #define TOPIC_PREFIX                                                                               \
     "mirra" // MQTT topic = `TOPIC_PREFIX` + '/' + `GATEWAY MAC` + '/' + `SENSOR MODULE MAC`
 #define MQTT_ATTEMPTS 5   // amount of attempts made to connect to MQTT server
@@ -25,16 +28,17 @@
 // s, time between each node's communication period
 #define COMM_PERIOD_PADDING 3
 // s, time between communication times for every nodes
-#define DEFAULT_COMM_INTERVAL (60 * 60)
+constexpr uint32_t defaultCommInterval = 60 * 60;
+// s, time between sensor sampling for every node
+constexpr uint32_t defaultSampleInterval = 20 * 60;
+// s, round sampling time to nearest ...
+constexpr uint32_t defaultSampleRounding = 20 * 60;
+constexpr uint32_t defaultSampleOffset = 0;
 
 #define WAKE_BEFORE_COMM_PERIOD                                                                    \
     5 // s, time before comm period when gateway should wake from deep sleep
 #define WAKE_COMM_PERIOD(X) ((X) - WAKE_BEFORE_COMM_PERIOD)
 #define LISTEN_COMM_PERIOD(X) ((X) - COMM_PERIOD_PADDING)
-
-#define DEFAULT_SAMPLE_INTERVAL (20 * 60) // s, time between sensor sampling for every node
-#define DEFAULT_SAMPLE_ROUNDING (20 * 60) // s, round sampling time to nearest ...
-#define DEFAULT_SAMPLE_OFFSET (0)
 
 #define DISCOVERY_TIMEOUT 5 * 60 * 1000 // ms
 

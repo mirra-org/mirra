@@ -57,6 +57,10 @@ public:
         T& operator=(T&& other) { return cachedValue = std::move(other); }
         operator T() const { return cachedValue; }
         operator T&() { return cachedValue; }
+        constexpr const T& operator*() const { return cachedValue; }
+        constexpr T& operator*() { return cachedValue; }
+        constexpr const T* operator->() const { return &cachedValue; }
+        constexpr T* operator->() { return &cachedValue; }
         friend class NVS;
     };
 
