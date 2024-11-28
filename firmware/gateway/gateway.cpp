@@ -47,8 +47,9 @@ void Gateway::wake()
     Serial.printf("Welcome! This is Gateway %s\n", lora.getMACAddress().toString());
     commandEntry.prompt(Commands(this));
     Log::debug("Entering deep sleep...");
+    parameters.~Parameters();
     if (nodes.empty())
-        deepSleep(parameters.commInterval);
+        deepSleep(3600);
     else
         deepSleepUntil(WAKE_COMM_PERIOD(nodes[0].getNextCommTime()));
 }
@@ -515,7 +516,7 @@ CommandCode Gateway::Commands::changeServer()
     if (!CommandParser::editValue(serverBuffer))
         return COMMAND_ERROR;
 
-    uint16_t portBuffer{sizeof(*(parent->parameters.mqttPort))};
+    uint16_t portBuffer{parent->parameters.mqttPort};
     Serial.printf("Enter the server's MQTT port (current: '%u') :\n", portBuffer);
     if (!CommandParser::editValue(portBuffer))
         return COMMAND_ERROR;
