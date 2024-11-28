@@ -15,6 +15,7 @@ uint8_t PCF2129_RTC::decToBcd(uint8_t value)
 PCF2129_RTC::PCF2129_RTC(uint8_t intPin, uint8_t address) : address{address}, intPin{intPin}
 {
     pinMode(intPin, INPUT_PULLUP);
+    enableAlarm(); // clears flags
     setSysTime();
 }
 
