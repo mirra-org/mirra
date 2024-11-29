@@ -49,7 +49,7 @@ def _dist_path(path: str) -> str:
 
 def _vite_asset(
     path: str,
-    scripts_attrs: dict[str] = {"type": "module", "async": "", "defer": ""},
+    scripts_attrs: dict[str] = {"type": "module", "defer": ""},
 ) -> str:
     if config.dev:
         return _script_tag(_vite_server_asset(path), scripts_attrs)
