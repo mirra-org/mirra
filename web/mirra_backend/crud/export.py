@@ -16,9 +16,11 @@ async def export_all_csv(session: Session) -> str:
     query = (
         sa.select(Measurement)
         .options(
-            joinedload(Measurement.node).options(
-                joinedload(Node.physical_module),
-                joinedload(Node.gateway).options(joinedload(Gateway.physical_module)),
+            joinedload(Measurement.node, innerjoin=True).options(
+                joinedload(Node.physical_module, innerjoin=True),
+                joinedload(Node.gateway, innerjoin=True).options(
+                    joinedload(Gateway.physical_module, innerjoin=True)
+                ),
             ),
             joinedload(Measurement.sensor),
         )
@@ -37,7 +39,7 @@ async def export_all_csv(session: Session) -> str:
             "sensor_unit",
         )
     )
-    results = (await session.stream_scalars(query)).unique()
+    results = await session.stream_scalars(query)
     async for meas in results:
         node: Node = meas.node
         gateway: Gateway = node.gateway
