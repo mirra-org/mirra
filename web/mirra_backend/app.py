@@ -5,10 +5,11 @@ from fastapi import FastAPI
 from fastapi.staticfiles import StaticFiles
 
 from mirra_backend.config import config
+from mirra_backend.crud.common import inject_session
 from mirra_backend.data.database import global_init
-from mirra_backend.data.prepopulation import prepopulate_sync
+from mirra_backend.data.prepopulation import prepopulate
 from mirra_backend.exceptions import MIRRAException, custom_exception_handler
-from mirra_backend.log import init_log, configure_app_logging
+from mirra_backend.log import configure_app_logging, init_log
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ async def lifespan(app: FastAPI):
     init_log()
     log.info("Starting MIRRA web service...")
     configure_app_logging()
-    configure_db()
+    await configure_db()
     if config.mqtt_enabled:
         log.info("Starting MQTT broker and parser...")
         configure_mqtt()
@@ -28,11 +29,11 @@ async def lifespan(app: FastAPI):
     yield
 
 
-def configure_db() -> None:
+async def configure_db() -> None:
     if not config.db_file.exists():
         config.db_file.parent.mkdir(parents=True, exist_ok=True)
         global_init()
-        prepopulate_sync()
+        await inject_session(prepopulate)
     else:
         global_init()
     config.location_images_folder.mkdir(parents=True, exist_ok=True)

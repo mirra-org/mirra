@@ -1,13 +1,15 @@
 import json
+import logging
 from pathlib import Path
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mirra_backend.config import DBPrefill, config
-from mirra_backend.crud.common import inject_session_sync
 
 from .modelbase import SqlAlchemyBase
+
+log = logging.getLogger(__name__)
 
 
 async def prepopulate(
@@ -29,10 +31,6 @@ async def prepopulate(
         case DBPrefill.custom:
             prepopulation_folder = config.prepopulation_folder
     await _prepopulate(session, prepopulation_folder)
-
-
-def prepopulate_sync() -> None:
-    return inject_session_sync(prepopulate)
 
 
 async def _prepopulate(session: AsyncSession, folder: Path) -> None:
