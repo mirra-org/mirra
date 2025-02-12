@@ -559,12 +559,7 @@ CommandCode Gateway::Commands::changeServer()
             {
                 Serial.printf("Error while submitting access code. Error code: '%i'.\n", status);
             }
-            Serial.println("Fallback: enter PSK manually (64 hexadecimal characters):");
-            if (!CommandParser::editValue(pskBuffer))
-            {
-                WiFi.disconnect();
-                return COMMAND_ERROR;
-            }
+            return COMMAND_ERROR;
         }
     }
     {
