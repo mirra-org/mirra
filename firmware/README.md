@@ -38,11 +38,11 @@ The following commands are exclusive to the gateway:
 
 - `wifi`: Enters an interactive mode in which the WiFi SSID and password can be changed. On a successful connect, the newly provided credentials will be stored and used for future connections,
 
-- `rtc`: Updates the module's time via the Network Time Protocol (NTP) and applies it to the RTC module. WiFi required.
+- `rtc`: Updates the module's time via the Network Time Protocol (NTP) and applies it to the RTC module. WiFi required. If this command takes forever, it might be because no internet connection is available.
 
 - `rtcreset`: Forcibly resets the gateway's time to `2000-01-01 00:00:00` and applies it to the RTC module.
 
-- `rtcset TIME`: Sets the gateway's time to `TIME`, where `TIME` is of format `'2000-03-23 14:32:01'`.
+- `rtcset`: Enters an interactive mode to set the gateway's time to `TIME`, where `TIME` is of format `'2000-03-23 14:32:01'`.
 
 - `server`: Enters an interactive mode in which the connection (URL, port and PSK) to the web server may be configured.
 
@@ -50,9 +50,9 @@ The following commands are exclusive to the gateway:
 
 - `discovery`: Enters a listening loop for discovery messages from nearby nodes. The gateway will answer with relevant configuration for the node, and will then add the node to its interal list of nodes on success. This loop may only be exited by pressing the BOOT button.
 
-- `addNode`: Enters an interactive mode to forcibly add a node to the gateway. Use only when the added node is already bound to the gateway with total certainty.
+- `addnode`: Enters an interactive mode to forcibly add a node to the gateway. Use only when the added node is already bound to the gateway with total certainty.
 
-- `removeNode MAC`: Forcibly removes a node with the address `MAC`from the gateway. Use only when the to-be removed node has errored or has verifiably stopped transmitting.
+- `removenode MAC`: Forcibly removes a node with the address `MAC`from the gateway. Use only when the to-be removed node has errored or has verifiably stopped transmitting.
 
 - `setup`: Convenience command that executes `wifi`, `rtc` and `server` sequentially after each other.
 
