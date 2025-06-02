@@ -14,6 +14,7 @@ services:
     mirra_web:
         container_name: "mirra_web"
         image: mirra_web:latest
+        restart: unless-stopped
         build: .
         volumes:
             - ./deploy_db/:/mirra_web/db/
